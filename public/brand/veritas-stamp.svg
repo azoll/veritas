@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="square">
+  
+  <polygon points="60,10 140,10 190,60 190,140 140,190 60,190 10,140 10,60"></polygon>
+  <polygon points="70,28 130,28 172,70 172,130 130,172 70,172 28,130 28,70" stroke-width="0.75"></polygon>
+  
+  <polyline points="70,102 92,124 132,80" stroke-width="3"></polyline>
+  
+  <path id="ring" d="M 100 28 a 72 72 0 1 1 -0.001 0" fill="none" stroke="none"></path>
+  <text font-family="&#39;IBM Plex Mono&#39;, monospace" font-size="11" letter-spacing="6" fill="currentColor">
+    <textPath href="#ring" startOffset="0">VERIFIED · VERITAS · VERIFIED · VERITAS · </textPath>
+  </text>
+</svg>

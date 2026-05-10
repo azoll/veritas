@@ -1,0 +1,372 @@
+/* ============================================================
+   VERITAS — Color, Type, and Foundational Tokens
+   ============================================================
+   Trust Infrastructure for AI-Assisted Legal Work.
+   Restrained. Forensic. Institutional.
+   ============================================================ */
+
+/* Fonts loaded via next/font in src/app/layout.tsx */
+
+:root {
+  /* ---------- CORE PALETTE ---------- */
+  --obsidian:           #0B0D10;  /* primary dark bg */
+  --obsidian-2:         #11141A;  /* raised surface on dark */
+  --obsidian-3:         #181C24;  /* secondary surface on dark */
+  --courtroom:          #F4F2EE;  /* primary light bg, warm */
+  --courtroom-2:        #ECE9E2;  /* raised surface on light */
+  --courtroom-3:        #E2DED4;  /* secondary surface on light */
+  --iron:               #5B6470;  /* secondary text */
+  --iron-2:             #8A929B;  /* tertiary text */
+  --navy:               #132238;  /* trust anchor */
+  --navy-2:             #1E3252;
+
+  /* ---------- STATE COLORS ---------- */
+  --verified:           #2E7D5A;
+  --verified-bg:        rgba(46, 125, 90, 0.08);
+  --amber:              #B88230;
+  --amber-bg:           rgba(184, 130, 48, 0.10);
+  --critical:           #8E2B2B;
+  --critical-bg:        rgba(142, 43, 43, 0.08);
+
+  /* ---------- HAIRLINES ---------- */
+  --hair-dark:          rgba(244, 242, 238, 0.08);
+  --hair-dark-2:        rgba(244, 242, 238, 0.16);
+  --hair-light:         rgba(11, 13, 16, 0.08);
+  --hair-light-2:       rgba(11, 13, 16, 0.16);
+
+  /* ---------- SEMANTIC TOKENS — DARK (default product) ---------- */
+  --bg:                 var(--obsidian);
+  --bg-raised:          var(--obsidian-2);
+  --bg-secondary:       var(--obsidian-3);
+  --fg:                 var(--courtroom);
+  --fg-2:               #B5B7BC;
+  --fg-3:               var(--iron);
+  --hair:               var(--hair-dark);
+  --hair-strong:        var(--hair-dark-2);
+  --accent:             var(--courtroom);
+  --on-accent:          var(--obsidian);
+
+  /* ---------- TYPE FAMILIES ---------- */
+  --font-sans:          'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --font-serif:         'Instrument Serif', 'Tiempos Headline', Georgia, serif;
+  --font-mono:          'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* ---------- TYPE SCALE ---------- */
+  --fs-eyebrow:         11px;
+  --fs-micro:           12px;
+  --fs-small:           13px;
+  --fs-body:            15px;
+  --fs-body-lg:         17px;
+  --fs-h6:              18px;
+  --fs-h5:              22px;
+  --fs-h4:              28px;
+  --fs-h3:              36px;
+  --fs-h2:              48px;
+  --fs-h1:              72px;
+  --fs-display:         112px;
+
+  /* ---------- LINE HEIGHT ---------- */
+  --lh-tight:           1.05;
+  --lh-display:         0.96;
+  --lh-snug:            1.25;
+  --lh-body:            1.45;
+  --lh-loose:           1.6;
+
+  /* ---------- TRACKING ---------- */
+  --tr-tight:           -0.02em;
+  --tr-normal:          0;
+  --tr-wide:            0.04em;
+  --tr-wider:           0.08em;
+  --tr-widest:          0.16em;
+
+  /* ---------- SPACING (4-pt) ---------- */
+  --space-1:            4px;
+  --space-2:            8px;
+  --space-3:            12px;
+  --space-4:            16px;
+  --space-5:            24px;
+  --space-6:            32px;
+  --space-7:            48px;
+  --space-8:            64px;
+  --space-9:            96px;
+  --space-10:           128px;
+
+  /* ---------- RADII (sharp by default) ---------- */
+  --radius-0:           0;
+  --radius-1:           2px;
+  --radius-pill:        9999px;
+
+  /* ---------- ELEVATION (used sparingly — popovers only) ---------- */
+  --shadow-pop:         0 12px 32px -8px rgba(0, 0, 0, 0.45);
+  --shadow-pop-light:   0 12px 32px -8px rgba(11, 13, 16, 0.18);
+
+  /* ---------- MOTION ---------- */
+  --ease-procedural:    cubic-bezier(0.2, 0.6, 0.2, 1);
+  --ease-linear:        linear;
+  --dur-instant:        80ms;
+  --dur-fast:           160ms;
+  --dur-base:           200ms;
+  --dur-slow:           320ms;
+  --dur-scan:           1200ms;
+
+  /* ---------- LAYOUT ---------- */
+  --gutter-outer:       80px;
+  --gutter-inner:       24px;
+  --header-h:           56px;
+  --sidebar-w:          264px;
+  --content-max:        1440px;
+  --editorial-max:      720px;
+}
+
+/* ---------- LIGHT MODE (document/courtroom surfaces) ---------- */
+[data-theme="light"] {
+  --bg:                 var(--courtroom);
+  --bg-raised:          var(--courtroom-2);
+  --bg-secondary:       var(--courtroom-3);
+  --fg:                 var(--obsidian);
+  --fg-2:               #2A2F37;
+  --fg-3:               var(--iron);
+  --hair:               var(--hair-light);
+  --hair-strong:        var(--hair-light-2);
+  --accent:             var(--obsidian);
+  --on-accent:          var(--courtroom);
+}
+
+/* ============================================================
+   SEMANTIC ELEMENT STYLES
+   ============================================================ */
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---------- HEADINGS ---------- */
+.v-display {
+  font-family: var(--font-serif);
+  font-size: var(--fs-display);
+  line-height: var(--lh-display);
+  letter-spacing: var(--tr-tight);
+  font-weight: 400;
+}
+.v-h1 {
+  font-family: var(--font-serif);
+  font-size: var(--fs-h1);
+  line-height: var(--lh-display);
+  letter-spacing: var(--tr-tight);
+  font-weight: 400;
+}
+.v-h2 {
+  font-family: var(--font-sans);
+  font-size: var(--fs-h2);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tr-tight);
+  font-weight: 500;
+}
+.v-h3 {
+  font-family: var(--font-sans);
+  font-size: var(--fs-h3);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tr-tight);
+  font-weight: 500;
+}
+.v-h4 {
+  font-family: var(--font-sans);
+  font-size: var(--fs-h4);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tr-normal);
+  font-weight: 500;
+}
+.v-h5 {
+  font-family: var(--font-sans);
+  font-size: var(--fs-h5);
+  line-height: var(--lh-snug);
+  font-weight: 500;
+}
+.v-h6 {
+  font-family: var(--font-sans);
+  font-size: var(--fs-h6);
+  line-height: var(--lh-snug);
+  font-weight: 500;
+}
+
+/* ---------- WIDE-TRACKED INSTITUTIONAL TYPE ---------- */
+.v-wordmark {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tr-widest);
+}
+.v-eyebrow {
+  font-family: var(--font-sans);
+  font-size: var(--fs-eyebrow);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tr-widest);
+  color: var(--fg-3);
+}
+.v-section-label {
+  font-family: var(--font-sans);
+  font-size: var(--fs-eyebrow);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--fg-3);
+}
+
+/* ---------- BODY ---------- */
+.v-body         { font-size: var(--fs-body);    line-height: var(--lh-body); }
+.v-body-lg      { font-size: var(--fs-body-lg); line-height: var(--lh-body); }
+.v-small        { font-size: var(--fs-small);   line-height: var(--lh-body); color: var(--fg-2); }
+.v-micro        { font-size: var(--fs-micro);   line-height: var(--lh-snug); color: var(--fg-3); }
+
+/* ---------- MONO ---------- */
+.v-mono         { font-family: var(--font-mono); font-size: var(--fs-small); }
+.v-mono-micro   { font-family: var(--font-mono); font-size: var(--fs-micro); letter-spacing: 0; }
+
+/* ---------- BADGES (status) ---------- */
+.v-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 2px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-radius: var(--radius-1);
+  border: 1px solid currentColor;
+  background: transparent;
+}
+.v-badge--verified { color: var(--verified); }
+.v-badge--amber    { color: var(--amber); }
+.v-badge--critical { color: var(--critical); }
+.v-badge--neutral  { color: var(--fg-3); }
+
+/* ---------- DOTS ---------- */
+.v-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 9999px;
+  background: currentColor;
+}
+
+/* ---------- BUTTONS ---------- */
+.v-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 20px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+  border-radius: var(--radius-0);
+  cursor: pointer;
+  transition: background var(--dur-base) var(--ease-procedural),
+              border-color var(--dur-base) var(--ease-procedural),
+              color var(--dur-base) var(--ease-procedural);
+  user-select: none;
+}
+.v-btn--primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.v-btn--primary:hover { background: var(--fg-2); }
+.v-btn--secondary {
+  background: transparent;
+  color: var(--fg);
+  border-color: var(--hair-strong);
+}
+.v-btn--secondary:hover { border-color: var(--fg); }
+.v-btn--ghost {
+  background: transparent;
+  color: var(--fg);
+  padding: 0 8px;
+}
+.v-btn--ghost:hover { color: var(--fg-2); }
+.v-btn:focus-visible {
+  outline: 2px solid var(--navy-2);
+  outline-offset: 2px;
+}
+.v-btn--sm { height: 32px; padding: 0 14px; font-size: 13px; }
+.v-btn--lg { height: 48px; padding: 0 24px; font-size: 15px; }
+
+/* ---------- INPUTS ---------- */
+.v-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  background: transparent;
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  border: 0;
+  border-bottom: 1px solid var(--hair-strong);
+  border-radius: 0;
+  outline: 0;
+  transition: border-color var(--dur-base) var(--ease-procedural);
+}
+.v-input:focus { border-color: var(--fg); }
+.v-input::placeholder { color: var(--fg-3); }
+
+/* ---------- CARDS ---------- */
+.v-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--hair);
+  border-radius: 0;
+  padding: var(--space-6);
+}
+
+/* ---------- DIVIDERS ---------- */
+.v-divider     { height: 1px; background: var(--hair); border: 0; }
+.v-divider--v  { width: 1px; align-self: stretch; background: var(--hair); }
+
+/* ---------- CITATION TOKEN ---------- */
+.v-citation {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border: 1px solid var(--hair-strong);
+  border-radius: var(--radius-1);
+  background: var(--bg-raised);
+}
+
+/* ---------- HAIRLINE GRID OVERLAY (forensic) ---------- */
+.v-grid-overlay {
+  background-image:
+    linear-gradient(to right,  var(--hair) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--hair) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* ---------- SCAN ANIMATION (verification) ---------- */
+@keyframes v-scan {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+.v-scan::after {
+  content: "";
+  position: absolute; left: 0; right: 0; top: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--fg) 50%, transparent);
+  animation: v-scan var(--dur-scan) var(--ease-linear) infinite;
+}
+
+/* ---------- UTILITY ---------- */
+*::selection { background: var(--navy); color: var(--courtroom); }

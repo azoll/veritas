@@ -3,7 +3,6 @@
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useRouter } from "next/navigation";
-import { cn } from "@/lib/cn";
 
 export function UploadDropzone() {
   const router = useRouter();
@@ -40,7 +39,9 @@ export function UploadDropzone() {
     multiple: false,
     accept: {
       "application/pdf": [".pdf"],
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
+        ".docx",
+      ],
       "text/plain": [".txt"],
     },
   });
@@ -49,25 +50,69 @@ export function UploadDropzone() {
     <div>
       <div
         {...getRootProps()}
-        className={cn(
-          "flex cursor-pointer flex-col items-center justify-center rounded-sm border-2 border-dashed border-black/15 bg-paper px-8 py-16 transition",
-          isDragActive && "border-gold bg-gold/5",
-          busy && "pointer-events-none opacity-60",
-        )}
+        style={{
+          cursor: "pointer",
+          padding: "64px 32px",
+          border: `1px dashed ${
+            isDragActive ? "var(--fg)" : "var(--hair-strong)"
+          }`,
+          background: isDragActive ? "var(--obsidian-2)" : "var(--bg-raised)",
+          textAlign: "center",
+          opacity: busy ? 0.6 : 1,
+          pointerEvents: busy ? "none" : "auto",
+          transition:
+            "border-color var(--dur-base) var(--ease-procedural), background var(--dur-base) var(--ease-procedural)",
+        }}
       >
         <input {...getInputProps()} />
-        <div className="font-display text-2xl text-ink">
-          {busy ? "Uploading & verifying…" : "Drop a brief, motion, or memo"}
+        <div
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontSize: 32,
+            fontWeight: 400,
+            letterSpacing: "-0.01em",
+            color: "var(--fg)",
+          }}
+        >
+          {busy
+            ? "Auditing filing…"
+            : "Drop a brief, motion, or memo to audit"}
         </div>
-        <div className="mt-3 text-sm text-muted">
+        <div
+          style={{
+            marginTop: 16,
+            fontSize: 14,
+            color: "var(--fg-2)",
+          }}
+        >
           PDF or DOCX · stays inside your firm · verified before it leaves
         </div>
-        <div className="mt-8 rounded-sm border hairline px-5 py-2 text-sm">
+        <div
+          style={{
+            display: "inline-block",
+            marginTop: 32,
+            padding: "10px 20px",
+            border: "1px solid var(--hair-strong)",
+            fontSize: 13,
+            color: "var(--fg)",
+            letterSpacing: "0.02em",
+          }}
+        >
           Browse files
         </div>
       </div>
       {error && (
-        <div className="mt-4 rounded-sm border border-risk/30 bg-risk/5 px-4 py-3 text-sm text-risk">
+        <div
+          style={{
+            marginTop: 16,
+            padding: "12px 16px",
+            border: "1px solid var(--critical)",
+            background: "var(--critical-bg)",
+            color: "var(--critical)",
+            fontSize: 13,
+            fontFamily: "var(--font-mono)",
+          }}
+        >
           {error}
         </div>
       )}

@@ -1,24 +1,7 @@
-import { cn } from "@/lib/cn";
+// Compatibility shim — re-export the canonical Seal/VWordmark.
+export { Seal as VeritasMark, VWordmark as WordmarkInline } from "./Seal";
 
-export function VeritasMark({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 64 72"
-      className={cn("h-8 w-auto", className)}
-      aria-hidden
-    >
-      {/* Stylized V with gold diamond inset */}
-      <path
-        d="M2 4 L32 64 L62 4 L52 4 L32 46 L12 4 Z"
-        fill="currentColor"
-      />
-      <path
-        d="M32 18 L40 30 L32 42 L24 30 Z"
-        className="fill-gold"
-      />
-    </svg>
-  );
-}
+import { Seal, VWordmark } from "./Seal";
 
 export function Wordmark({
   className,
@@ -28,23 +11,31 @@ export function Wordmark({
   tagline?: boolean;
 }) {
   return (
-    <div className={cn("flex flex-col items-center gap-2", className)}>
-      <VeritasMark />
-      <div className="wordmark text-2xl">VERITAS</div>
+    <div
+      className={className}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 12,
+      }}
+    >
+      <Seal size={32} />
+      <VWordmark size={16} />
       {tagline && (
-        <div className="text-[10px] uppercase tracking-[0.3em] text-muted">
-          Every Citation Defensible
+        <div
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 10,
+            letterSpacing: "0.3em",
+            textTransform: "uppercase",
+            color: "var(--fg-3)",
+            marginTop: 4,
+          }}
+        >
+          Trust, Verified.
         </div>
       )}
-    </div>
-  );
-}
-
-export function WordmarkInline({ className }: { className?: string }) {
-  return (
-    <div className={cn("flex items-center gap-3 text-ink", className)}>
-      <VeritasMark className="h-7" />
-      <span className="wordmark text-lg">VERITAS</span>
     </div>
   );
 }

@@ -32,85 +32,168 @@ export default async function DashboardPage() {
     .limit(50);
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-6 py-12">
-      <div className="mb-12">
-        <div className="text-xs uppercase tracking-[0.25em] text-gold-2">
-          Verification Queue
-        </div>
-        <h1 className="mt-2 font-display text-4xl">Documents</h1>
+    <div style={{ maxWidth: 1440, margin: "0 auto", padding: "64px 40px", width: "100%" }}>
+      <div style={{ marginBottom: 56 }}>
+        <div className="v-eyebrow">Filings · Verification Queue</div>
+        <h1
+          style={{
+            margin: "12px 0 0",
+            fontFamily: "var(--font-serif)",
+            fontSize: 64,
+            fontWeight: 400,
+            letterSpacing: "-0.02em",
+            lineHeight: 1,
+          }}
+        >
+          Filings
+        </h1>
       </div>
 
       <UploadDropzone />
 
-      <div className="mt-16">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-display text-2xl">Recent</h2>
-          <span className="text-xs text-muted">{docs.length} document(s)</span>
+      <div style={{ marginTop: 72 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            marginBottom: 16,
+          }}
+        >
+          <h2
+            style={{
+              margin: 0,
+              fontFamily: "var(--font-sans)",
+              fontSize: 22,
+              fontWeight: 500,
+            }}
+          >
+            Recent
+          </h2>
+          <span
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              color: "var(--fg-3)",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            {docs.length} filing{docs.length === 1 ? "" : "s"}
+          </span>
         </div>
 
         {docs.length === 0 ? (
-          <div className="rounded-sm border hairline px-6 py-12 text-center text-muted">
-            No documents yet. Upload a brief above to start verification.
+          <div
+            style={{
+              border: "1px solid var(--hair)",
+              padding: "64px 24px",
+              textAlign: "center",
+              color: "var(--fg-3)",
+              fontFamily: "var(--font-mono)",
+              fontSize: 12,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            No filings yet. Upload a brief above to begin audit.
           </div>
         ) : (
-          <div className="overflow-hidden rounded-sm border hairline">
-            <table className="w-full text-sm">
-              <thead className="bg-paper-2 text-xs uppercase tracking-wider text-muted">
-                <tr>
-                  <th className="px-4 py-3 text-left">Title</th>
-                  <th className="px-4 py-3 text-right">Citations</th>
-                  <th className="px-4 py-3 text-right">Risk</th>
-                  <th className="px-4 py-3 text-right">Confidence</th>
-                  <th className="px-4 py-3 text-left">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {docs.map((d) => {
-                  const v = rollupVerdict(d);
-                  return (
-                    <tr
-                      key={d.id}
-                      className="border-t hairline hover:bg-paper-2/60"
+          <div style={{ border: "1px solid var(--hair)" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 100px 120px 120px 140px",
+                gap: 16,
+                padding: "12px 20px",
+                background: "var(--bg-raised)",
+                borderBottom: "1px solid var(--hair)",
+                fontFamily: "var(--font-mono)",
+                fontSize: 10,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: "var(--fg-3)",
+              }}
+            >
+              <div>Filing</div>
+              <div style={{ textAlign: "right" }}>Citations</div>
+              <div style={{ textAlign: "right" }}>Risk</div>
+              <div style={{ textAlign: "right" }}>Score</div>
+              <div>Status</div>
+            </div>
+            {docs.map((d) => {
+              const v = rollupVerdict(d);
+              return (
+                <Link
+                  key={d.id}
+                  href={`/documents/${d.id}`}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 100px 120px 120px 140px",
+                    gap: 16,
+                    padding: "16px 20px",
+                    borderBottom: "1px solid var(--hair)",
+                    textDecoration: "none",
+                    color: "var(--fg)",
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 14, color: "var(--fg)" }}>
+                      {d.title}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--fg-3)",
+                        fontFamily: "var(--font-mono)",
+                        marginTop: 2,
+                      }}
                     >
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/documents/${d.id}`}
-                          className="font-medium text-ink hover:text-gold-2"
-                        >
-                          {d.title}
-                        </Link>
-                        <div className="text-xs text-muted">{d.filename}</div>
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums">
-                        {d.citationCount}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="tabular-nums text-risk">
-                          {d.riskCount}
-                        </span>
-                        <span className="mx-1 text-muted-2">/</span>
-                        <span className="tabular-nums text-warn">
-                          {d.warningCount}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums">
-                        {d.confidenceScore != null
-                          ? `${d.confidenceScore}%`
-                          : "—"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <VerdictPill verdict={v} />
-                        {d.status !== "ready" && (
-                          <span className="ml-2 text-xs text-muted">
-                            {d.status}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      {d.filename}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      textAlign: "right",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 13,
+                      color: "var(--fg-2)",
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {d.citationCount}
+                  </div>
+                  <div
+                    style={{
+                      textAlign: "right",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 13,
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    <span style={{ color: "var(--critical)" }}>{d.riskCount}</span>
+                    <span style={{ color: "var(--fg-3)" }}> · </span>
+                    <span style={{ color: "var(--amber)" }}>{d.warningCount}</span>
+                  </div>
+                  <div
+                    style={{
+                      textAlign: "right",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 13,
+                      color: "var(--fg)",
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {d.confidenceScore != null
+                      ? `${100 - d.confidenceScore}`
+                      : "—"}
+                  </div>
+                  <div>
+                    <VerdictPill verdict={v} />
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

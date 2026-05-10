@@ -17,53 +17,105 @@ export default async function AuditPage() {
     .limit(200);
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-6 py-12">
-      <div className="mb-10">
-        <div className="text-xs uppercase tracking-[0.25em] text-gold-2">
-          Defensible Audit Trail
-        </div>
-        <h1 className="mt-2 font-display text-4xl">Activity</h1>
-        <p className="mt-3 max-w-2xl text-sm text-muted">
+    <div
+      style={{
+        maxWidth: 1440,
+        margin: "0 auto",
+        padding: "64px 40px",
+        width: "100%",
+      }}
+    >
+      <div style={{ marginBottom: 48 }}>
+        <div className="v-eyebrow">Defensible Audit Trail</div>
+        <h1
+          style={{
+            margin: "12px 0 16px",
+            fontFamily: "var(--font-serif)",
+            fontSize: 56,
+            fontWeight: 400,
+            letterSpacing: "-0.02em",
+            lineHeight: 1,
+          }}
+        >
+          Activity
+        </h1>
+        <p
+          style={{
+            maxWidth: 680,
+            fontSize: 15,
+            lineHeight: 1.6,
+            color: "var(--fg-2)",
+          }}
+        >
           Every action — uploads, verifications, model invocations — is
           logged here, append-only, scoped to your firm. Export at any time
           for compliance, malpractice review, or court inquiry.
         </p>
       </div>
 
-      <div className="overflow-hidden rounded-sm border hairline">
-        <table className="w-full text-sm">
-          <thead className="bg-paper-2 text-xs uppercase tracking-wider text-muted">
-            <tr>
-              <th className="px-4 py-3 text-left">When</th>
-              <th className="px-4 py-3 text-left">Action</th>
-              <th className="px-4 py-3 text-left">Target</th>
-              <th className="px-4 py-3 text-left">Actor</th>
-            </tr>
-          </thead>
-          <tbody>
-            {events.map((e) => (
-              <tr key={e.id} className="border-t hairline">
-                <td className="px-4 py-3 text-xs tabular-nums text-muted">
-                  {new Date(e.createdAt).toISOString().replace("T", " ").slice(0, 19)}
-                </td>
-                <td className="px-4 py-3 font-mono text-xs">{e.action}</td>
-                <td className="px-4 py-3 text-xs text-muted">
-                  {e.targetKind}/{e.targetId?.slice(0, 8)}
-                </td>
-                <td className="px-4 py-3 text-xs text-muted">
-                  {e.actorClerkId?.slice(0, 14) ?? "system"}
-                </td>
-              </tr>
-            ))}
-            {events.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-4 py-12 text-center text-muted">
-                  No activity yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div style={{ border: "1px solid var(--hair)" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "200px 1fr 1fr 1fr",
+            gap: 16,
+            padding: "12px 20px",
+            background: "var(--bg-raised)",
+            borderBottom: "1px solid var(--hair)",
+            fontFamily: "var(--font-mono)",
+            fontSize: 10,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: "var(--fg-3)",
+          }}
+        >
+          <div>When</div>
+          <div>Action</div>
+          <div>Target</div>
+          <div>Actor</div>
+        </div>
+        {events.map((e) => (
+          <div
+            key={e.id}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "200px 1fr 1fr 1fr",
+              gap: 16,
+              padding: "12px 20px",
+              borderBottom: "1px solid var(--hair)",
+              fontFamily: "var(--font-mono)",
+              fontSize: 12,
+              color: "var(--fg-2)",
+            }}
+          >
+            <div style={{ color: "var(--fg-3)" }}>
+              {new Date(e.createdAt)
+                .toISOString()
+                .replace("T", " ")
+                .slice(0, 19)}
+            </div>
+            <div style={{ color: "var(--fg)" }}>{e.action}</div>
+            <div>
+              {e.targetKind}/{e.targetId?.slice(0, 8)}
+            </div>
+            <div>{e.actorClerkId?.slice(0, 14) ?? "system"}</div>
+          </div>
+        ))}
+        {events.length === 0 && (
+          <div
+            style={{
+              padding: "48px 16px",
+              textAlign: "center",
+              color: "var(--fg-3)",
+              fontFamily: "var(--font-mono)",
+              fontSize: 12,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            No activity yet.
+          </div>
+        )}
       </div>
     </div>
   );

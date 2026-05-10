@@ -3,10 +3,25 @@ import { Wordmark } from "@/components/brand/Wordmark";
 
 export default function SignInPage() {
   return (
-    <div className="flex flex-1 items-center justify-center py-16">
-      <div className="flex flex-col items-center gap-10">
+    <div
+      style={{
+        flex: 1,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "64px 16px",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 40,
+        }}
+      >
         <Wordmark tagline />
-        <SignIn appearance={{ elements: { card: "shadow-none border hairline rounded-sm" } }} />
+        <SignIn />
       </div>
     </div>
   );

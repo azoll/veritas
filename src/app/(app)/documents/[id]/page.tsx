@@ -9,6 +9,8 @@ import { EmptyScope } from "@/components/EmptyScope";
 
 export const dynamic = "force-dynamic";
 
+const SEV: Record<string, number> = { risk: 0, warning: 1, unknown: 2, verified: 3 };
+
 export default async function DocumentPage({
   params,
 }: {
@@ -23,7 +25,10 @@ export default async function DocumentPage({
     .select()
     .from(schema.documents)
     .where(
-      and(eq(schema.documents.id, id), eq(schema.documents.firmId, scope.firmId)),
+      and(
+        eq(schema.documents.id, id),
+        eq(schema.documents.firmId, scope.firmId),
+      ),
     );
   if (!doc) notFound();
 
@@ -57,11 +62,7 @@ export default async function DocumentPage({
         )
     : [];
 
-  // Sort by severity for triage
-  const sevRank = { risk: 0, warning: 1, unknown: 2, verified: 3 } as const;
-  const sorted = [...citations].sort(
-    (a, b) => sevRank[a.verdict] - sevRank[b.verdict],
-  );
+  const sorted = [...citations].sort((a, b) => SEV[a.verdict] - SEV[b.verdict]);
 
   const verifsByCit = new Map<string, typeof verifications>();
   for (const v of verifications) {
@@ -85,62 +86,168 @@ export default async function DocumentPage({
           ? "warning"
           : "verified";
 
+  // Risk score: lower = safer. Inverted from stored "confidence".
+  const riskScore =
+    doc.confidenceScore != null ? 100 - doc.confidenceScore : null;
+
   return (
-    <div className="mx-auto w-full max-w-6xl px-6 py-10">
-      {/* Breadcrumb */}
+    <div
+      style={{
+        maxWidth: 1440,
+        margin: "0 auto",
+        padding: "48px 40px",
+        width: "100%",
+      }}
+    >
       <Link
         href="/dashboard"
-        className="text-xs uppercase tracking-[0.2em] text-muted hover:text-ink"
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: 11,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: "var(--fg-3)",
+          textDecoration: "none",
+        }}
       >
-        ← Documents
+        ← Filings
       </Link>
 
-      {/* Header */}
-      <div className="mt-4 grid grid-cols-1 gap-8 border-b hairline pb-10 md:grid-cols-3">
-        <div className="md:col-span-2">
-          <div className="text-xs uppercase tracking-[0.25em] text-gold-2">
-            Verification Report
+      <div
+        style={{
+          marginTop: 16,
+          paddingBottom: 40,
+          borderBottom: "1px solid var(--hair)",
+          display: "grid",
+          gridTemplateColumns: "1fr 320px",
+          gap: 48,
+          alignItems: "end",
+        }}
+      >
+        <div>
+          <div className="v-eyebrow">Verification Report</div>
+          <h1
+            style={{
+              margin: "12px 0 0",
+              fontFamily: "var(--font-serif)",
+              fontSize: 56,
+              fontWeight: 400,
+              letterSpacing: "-0.02em",
+              lineHeight: 1.05,
+            }}
+          >
+            {doc.title}
+          </h1>
+          <div
+            style={{
+              marginTop: 8,
+              fontSize: 13,
+              fontFamily: "var(--font-mono)",
+              color: "var(--fg-3)",
+            }}
+          >
+            {doc.filename}
           </div>
-          <h1 className="mt-2 font-display text-4xl">{doc.title}</h1>
-          <div className="mt-2 text-sm text-muted">{doc.filename}</div>
-          <div className="mt-4">
+          <div style={{ marginTop: 16, display: "flex", gap: 12, alignItems: "center" }}>
             <VerdictPill verdict={overall as "verified" | "warning" | "risk" | "unknown"} />
             {doc.status !== "ready" && (
-              <span className="ml-3 text-sm text-muted">
-                Status: {doc.status}
-                {doc.error ? ` — ${doc.error}` : ""}
+              <span
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 11,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "var(--fg-2)",
+                }}
+              >
+                {doc.status}
+                {doc.error ? ` · ${doc.error}` : ""}
               </span>
             )}
+            <Link
+              href={`/api/documents/${doc.id}/report`}
+              target="_blank"
+              className="v-btn v-btn--secondary v-btn--sm"
+              style={{ marginLeft: "auto" }}
+            >
+              Generate risk report
+            </Link>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-1">
-          <Stat label="Confidence" value={doc.confidenceScore != null ? `${doc.confidenceScore}%` : "—"} />
-          <Stat label="Citations" value={String(doc.citationCount)} />
-          <div className="flex gap-3">
-            <Stat label="Risk" value={String(doc.riskCount)} tone="risk" />
-            <Stat label="Warn" value={String(doc.warningCount)} tone="warn" />
-            <Stat label="OK" value={String(doc.verifiedCount)} tone="verified" />
-          </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 1,
+            background: "var(--hair)",
+            border: "1px solid var(--hair)",
+          }}
+        >
+          <Stat label="Risk score" value={riskScore != null ? String(riskScore) : "—"} tone="ink" />
+          <Stat label="Citations" value={String(doc.citationCount)} tone="ink" />
+          <Stat label="Fabricated" value={String(doc.riskCount)} tone="critical" />
+          <Stat label="Unsupported" value={String(doc.warningCount)} tone="amber" />
         </div>
       </div>
 
-      {/* Citation review list */}
-      <div className="mt-10">
-        <h2 className="mb-6 font-display text-2xl">Citations · sorted by risk</h2>
+      <div style={{ marginTop: 56 }}>
+        <h2
+          style={{
+            margin: "0 0 24px",
+            fontFamily: "var(--font-sans)",
+            fontSize: 22,
+            fontWeight: 500,
+          }}
+        >
+          Citations · sorted by severity
+        </h2>
 
         {sorted.length === 0 && doc.status === "ready" && (
-          <div className="rounded-sm border hairline px-6 py-12 text-center text-muted">
-            No citations were detected in this document.
+          <div
+            style={{
+              border: "1px solid var(--hair)",
+              padding: "48px 16px",
+              textAlign: "center",
+              color: "var(--fg-3)",
+              fontFamily: "var(--font-mono)",
+              fontSize: 12,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            No citations were detected in this filing.
           </div>
         )}
         {doc.status !== "ready" && doc.status !== "failed" && (
-          <div className="rounded-sm border hairline bg-paper-2 px-6 py-8 text-center text-muted">
-            Verification in progress — refresh in a moment.
+          <div
+            style={{
+              position: "relative",
+              overflow: "hidden",
+              border: "1px solid var(--hair)",
+              padding: "32px 16px",
+              textAlign: "center",
+              color: "var(--fg-2)",
+              background: "var(--bg-raised)",
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                top: 0,
+                height: 2,
+                background:
+                  "linear-gradient(90deg, transparent, var(--courtroom) 50%, transparent)",
+                animation: "vScan 2.4s linear infinite",
+              }}
+            />
+            Audit running · refresh in a moment.
           </div>
         )}
 
-        <div className="space-y-4">
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {sorted.map((c) => (
             <CitationCard
               key={c.id}
@@ -162,20 +269,42 @@ function Stat({
 }: {
   label: string;
   value: string;
-  tone?: "verified" | "warn" | "risk";
+  tone: "ink" | "critical" | "amber" | "verified";
 }) {
-  const toneClass =
-    tone === "risk"
-      ? "text-risk"
-      : tone === "warn"
-        ? "text-warn"
+  const color =
+    tone === "critical"
+      ? "var(--critical)"
+      : tone === "amber"
+        ? "var(--amber)"
         : tone === "verified"
-          ? "text-verified"
-          : "text-ink";
+          ? "var(--verified)"
+          : "var(--fg)";
   return (
-    <div className="rounded-sm border hairline bg-paper px-4 py-3">
-      <div className="text-[10px] uppercase tracking-[0.25em] text-muted">{label}</div>
-      <div className={`mt-1 font-display text-2xl tabular-nums ${toneClass}`}>{value}</div>
+    <div style={{ background: "var(--bg-raised)", padding: "16px 18px" }}>
+      <div
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: 10,
+          letterSpacing: "0.16em",
+          textTransform: "uppercase",
+          color: "var(--fg-3)",
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          marginTop: 8,
+          fontFamily: "var(--font-serif)",
+          fontSize: 36,
+          fontWeight: 400,
+          letterSpacing: "-0.02em",
+          color,
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        {value}
+      </div>
     </div>
   );
 }

@@ -3,12 +3,11 @@
 import { useState } from "react";
 import type { Citation, Verification, Quote } from "@/lib/db/schema";
 import { VerdictPill } from "@/components/ui/Verdict";
-import { cn } from "@/lib/cn";
 
 const KIND_LABEL: Record<string, string> = {
   existence: "Citation exists",
   treatment: "Subsequent treatment",
-  pincite: "Pincite / quote",
+  pincite: "Pincite · quote",
   proposition: "Proposition support",
   adversarial: "Adversarial review",
 };
@@ -25,67 +24,151 @@ export function CitationCard({
   const [open, setOpen] = useState(citation.verdict !== "verified");
   const v = citation.verdict;
 
+  const accent =
+    v === "risk"
+      ? "var(--critical)"
+      : v === "warning"
+        ? "var(--amber)"
+        : v === "verified"
+          ? "var(--verified)"
+          : "var(--hair-strong)";
+
   return (
     <div
-      className={cn(
-        "rounded-sm border hairline bg-paper",
-        v === "risk" && "border-risk/30",
-        v === "warning" && "border-warn/30",
-      )}
+      style={{
+        border: "1px solid var(--hair)",
+        borderLeft: `2px solid ${accent}`,
+        background: "var(--bg-raised)",
+      }}
     >
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-start justify-between gap-6 px-5 py-4 text-left"
+        style={{
+          display: "flex",
+          width: "100%",
+          padding: "16px 20px",
+          background: "transparent",
+          border: 0,
+          color: "var(--fg)",
+          textAlign: "left",
+          cursor: "pointer",
+          gap: 24,
+          justifyContent: "space-between",
+        }}
       >
-        <div className="min-w-0 flex-1">
-          <div className="font-mono text-sm text-ink">
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 13,
+              color: "var(--fg)",
+            }}
+          >
             {citation.caseName ? `${citation.caseName}, ` : ""}
-            <span className="font-semibold">{citation.normalized}</span>
+            <span style={{ fontWeight: 500 }}>{citation.normalized}</span>
             {citation.year ? ` (${citation.year})` : ""}
           </div>
           {citation.contextSnippet && (
-            <div className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted">
+            <div
+              style={{
+                marginTop: 8,
+                fontSize: 13,
+                color: "var(--fg-2)",
+                lineHeight: 1.6,
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
               …{citation.contextSnippet}…
             </div>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-3">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexShrink: 0,
+          }}
+        >
           <VerdictPill verdict={v} />
-          <span className="text-muted">{open ? "−" : "+"}</span>
+          <span style={{ color: "var(--fg-3)", fontFamily: "var(--font-mono)" }}>
+            {open ? "−" : "+"}
+          </span>
         </div>
       </button>
 
       {open && (
-        <div className="border-t hairline bg-paper-2/40 px-5 py-4">
+        <div
+          style={{
+            borderTop: "1px solid var(--hair)",
+            padding: "20px",
+            background: "var(--bg-secondary)",
+          }}
+        >
           {citation.notes && (
-            <div className="mb-4 rounded-sm bg-risk/10 px-3 py-2 text-sm text-risk">
+            <div
+              style={{
+                marginBottom: 16,
+                padding: "12px 14px",
+                background: "var(--critical-bg)",
+                color: "var(--critical)",
+                fontSize: 13,
+                border: "1px solid var(--critical)",
+              }}
+            >
               {citation.notes}
             </div>
           )}
-
-          <div className="space-y-3">
-            {verifications.map((v) => (
-              <div key={v.id} className="flex gap-4">
-                <div className="w-40 shrink-0 text-xs uppercase tracking-wider text-muted">
-                  {KIND_LABEL[v.kind] ?? v.kind}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {verifications.map((vf) => (
+              <div key={vf.id} style={{ display: "flex", gap: 16 }}>
+                <div
+                  style={{
+                    width: 160,
+                    flexShrink: 0,
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 11,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "var(--fg-3)",
+                  }}
+                >
+                  {KIND_LABEL[vf.kind] ?? vf.kind}
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <VerdictPill verdict={v.verdict} />
-                    {v.sourceUrl && (
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <VerdictPill verdict={vf.verdict} />
+                    {vf.sourceUrl && (
                       <a
-                        href={v.sourceUrl}
+                        href={vf.sourceUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-gold-2 hover:underline"
+                        style={{
+                          fontFamily: "var(--font-mono)",
+                          fontSize: 11,
+                          color: "var(--fg-2)",
+                          textDecoration: "none",
+                          letterSpacing: "0.12em",
+                          textTransform: "uppercase",
+                        }}
                       >
                         Source ↗
                       </a>
                     )}
                   </div>
-                  {v.detail && (
-                    <p className="mt-2 text-sm leading-relaxed text-ink/80">
-                      {v.detail}
+                  {vf.detail && (
+                    <p
+                      style={{
+                        margin: "8px 0 0",
+                        fontSize: 14,
+                        color: "var(--fg)",
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      {vf.detail}
                     </p>
                   )}
                 </div>
@@ -93,16 +176,49 @@ export function CitationCard({
             ))}
 
             {quotes.length > 0 && (
-              <div className="mt-4 rounded-sm border hairline bg-paper p-4">
-                <div className="mb-2 text-xs uppercase tracking-wider text-muted">
+              <div
+                style={{
+                  marginTop: 8,
+                  padding: 16,
+                  border: "1px solid var(--hair)",
+                  background: "var(--bg-raised)",
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 11,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    color: "var(--fg-3)",
+                    marginBottom: 12,
+                  }}
+                >
                   Quoted language
                 </div>
                 {quotes.map((q) => (
-                  <div key={q.id} className="space-y-2">
-                    <blockquote className="border-l-2 border-gold pl-3 font-display text-base italic">
-                      “{q.quotedText}”
+                  <div key={q.id}>
+                    <blockquote
+                      style={{
+                        margin: 0,
+                        paddingLeft: 14,
+                        borderLeft: "2px solid #B88230",
+                        fontFamily: "var(--font-serif)",
+                        fontStyle: "italic",
+                        fontSize: 16,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      &ldquo;{q.quotedText}&rdquo;
                     </blockquote>
-                    <div className="text-xs text-muted">
+                    <div
+                      style={{
+                        marginTop: 8,
+                        fontFamily: "var(--font-mono)",
+                        fontSize: 11,
+                        color: "var(--fg-3)",
+                      }}
+                    >
                       Match score: {q.matchScore ?? 0}% · {q.verdict}
                     </div>
                   </div>
@@ -111,7 +227,7 @@ export function CitationCard({
             )}
 
             {verifications.length === 0 && (
-              <div className="text-sm text-muted">
+              <div style={{ fontSize: 13, color: "var(--fg-3)" }}>
                 No checks have completed yet for this citation.
               </div>
             )}
