@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0a0a0a;
+  --color-paper: #fafaf7;
+  --color-paper-2: #f3f1ea;
+  --color-line: #1a1a1a;
+  --color-muted: #6b6b66;
+  --color-muted-2: #a8a59c;
+
+  --color-gold: #c9a961;
+  --color-gold-2: #b8954a;
+  --color-gold-3: #e6cf94;
+
+  --color-verified: #2d6a4f;
+  --color-warn: #b08400;
+  --color-risk: #a83232;
+
+  --font-display: var(--font-cormorant), ui-serif, Georgia, serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+:root {
+  --background: var(--color-paper);
+  --foreground: var(--color-ink);
+}
+
+html, body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+body {
+  font-feature-settings: "ss01", "cv11";
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  letter-spacing: 0.32em;
+  font-weight: 500;
+}
+
+.hairline {
+  border-color: rgb(0 0 0 / 0.08);
+}
