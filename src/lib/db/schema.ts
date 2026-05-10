@@ -4,6 +4,7 @@ import {
   timestamp,
   uuid,
   integer,
+  boolean,
   jsonb,
   pgEnum,
   index,
@@ -115,6 +116,14 @@ export const documents = pgTable(
     warningCount: integer("warning_count").notNull().default(0),
     verifiedCount: integer("verified_count").notNull().default(0),
     confidenceScore: integer("confidence_score"),
+    /** When true, run proposition validation via AI Gateway in addition to
+     *  the deterministic checks. Default: standard scan only. */
+    deepScan: boolean("deep_scan").notNull().default(false),
+    /** For anonymous trial uploads. Cookie value; null for authenticated
+     *  uploads. Trial documents are anchored to the seeded anonymous firm. */
+    trialSessionId: text("trial_session_id"),
+    /** Trial documents auto-expire 24h after upload unless claimed by sign-up. */
+    expiresAt: timestamp("expires_at"),
     error: text("error"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -122,6 +131,7 @@ export const documents = pgTable(
   (t) => [
     index("documents_firm_team_idx").on(t.firmId, t.teamId),
     index("documents_status_idx").on(t.status),
+    index("documents_trial_idx").on(t.trialSessionId, t.expiresAt),
   ],
 );
 

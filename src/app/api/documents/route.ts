@@ -23,6 +23,7 @@ export async function POST(req: Request) {
   const file = form.get("file");
   const title = (form.get("title") as string | null) ?? "Untitled";
   const teamIdInput = form.get("teamId") as string | null;
+  const deepScan = (form.get("deep") as string | null) === "true";
   if (!(file instanceof File)) {
     return Response.json({ error: "file required" }, { status: 400 });
   }
@@ -81,6 +82,7 @@ export async function POST(req: Request) {
       sizeBytes: buf.byteLength,
       rawText: parsed.text,
       status: "extracting",
+      deepScan,
     })
     .returning();
 

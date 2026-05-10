@@ -1,6 +1,8 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
+import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { TRIAL_COOKIE, claimTrialDocs } from "@/lib/trial";
 
 export type Scope = {
   firmId: string;
@@ -50,6 +52,39 @@ export async function getScope(): Promise<Scope | null> {
       .insert(schema.users)
       .values({ clerkUserId: userId, firmId: firm.id, email, name })
       .returning();
+  }
+
+  // Claim anonymous trial uploads into this firm on first authenticated
+  // visit. Idempotent — once claimed, the trial cookie is cleared.
+  try {
+    const cookieStore = await cookies();
+    const trialId = cookieStore.get(TRIAL_COOKIE)?.value;
+    if (trialId) {
+      // Ensure a default team exists for the firm.
+      let [team] = await db
+        .select()
+        .from(schema.teams)
+        .where(eq(schema.teams.firmId, firm.id))
+        .limit(1);
+      if (!team) {
+        [team] = await db
+          .insert(schema.teams)
+          .values({ firmId: firm.id, name: "Default" })
+          .returning();
+      }
+      const claimed = await claimTrialDocs({
+        sessionId: trialId,
+        firmId: firm.id,
+        teamId: team.id,
+        userId: u.id,
+      });
+      if (claimed > 0) {
+        cookieStore.delete(TRIAL_COOKIE);
+      }
+    }
+  } catch (e) {
+    // Claim failure should not block sign-in.
+    console.warn("[veritas] trial claim failed:", (e as Error).message);
   }
 
   return {
