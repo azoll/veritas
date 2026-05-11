@@ -1,0 +1,114 @@
+<!--
+  Veritas — Branded email signature for Google Workspace.
+
+  How to use:
+    1. Open this file in any browser.
+    2. Select the rendered preview below the divider (NOT the source).
+    3. Cmd-C (copy).
+    4. Gmail → Settings → See all settings → Signatures → Create new
+       → paste in the editor. Save changes.
+
+  The signature uses inline styles and absolute image URLs hosted on
+  veritaslaw.app, so it survives Gmail's HTML sanitizer and renders
+  consistently across Gmail, Outlook, Apple Mail, and most clients.
+
+  Customize: edit the NAME / TITLE / PHONE rows below. Phone is
+  optional — delete the row if unused.
+-->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8" /><title>Veritas — Email Signature</title>
+<style>
+  body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #f4f2ee; padding: 40px; }
+  .preview-frame { background: #fff; border: 1px solid #0b0d101a; padding: 32px; max-width: 720px; }
+  .label { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: #5b6470; margin-bottom: 16px; }
+  hr { border: 0; border-top: 1px solid #0b0d101a; margin: 32px 0; }
+</style>
+</head>
+<body>
+
+<div class="preview-frame">
+  <div class="label">Email signature · copy from below</div>
+
+  <!-- ============== START: paste-this-block ============== -->
+  <table cellpadding="0" cellspacing="0" border="0" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #0B0D10; line-height: 1.45;">
+    <tr>
+      <td style="padding-right: 18px; vertical-align: top; border-right: 1px solid #0B0D101A;">
+        <img
+          src="https://veritaslaw.app/brand/seal.png"
+          alt="Veritas"
+          width="56"
+          height="62"
+          style="display: block; border: 0; outline: none;"
+        />
+      </td>
+      <td style="padding-left: 18px; vertical-align: top; font-size: 13px;">
+        <div style="font-weight: 600; font-size: 14px; color: #0B0D10; letter-spacing: 0.01em;">
+          Andrew Zoll
+        </div>
+        <div style="font-size: 12px; color: #5B6470; margin-top: 2px;">
+          Founder &amp; CEO · Veritas
+        </div>
+        <div style="height: 10px;"></div>
+        <div style="font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 11px; color: #0B0D10;">
+          <a href="mailto:andrew@veritaslaw.app" style="color: #0B0D10; text-decoration: none;">andrew@veritaslaw.app</a>
+        </div>
+        <div style="font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 11px; color: #5B6470; margin-top: 2px;">
+          <a href="https://veritaslaw.app" style="color: #5B6470; text-decoration: none;">veritaslaw.app</a>
+        </div>
+        <div style="height: 14px;"></div>
+        <div style="font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: #B88230;">
+          Trust, Verified.
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding-top: 18px;">
+        <div style="border-top: 1px solid #0B0D101A; padding-top: 12px; font-size: 11px; line-height: 1.55; color: #8A929B; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 540px;">
+          Veritas is AI verification infrastructure for law — citation, holding, and quotation review for AI-assisted filings, before they leave the firm.
+        </div>
+      </td>
+    </tr>
+  </table>
+  <!-- ============== END: paste-this-block ============== -->
+
+  <hr />
+
+  <div class="label">Variants</div>
+
+  <div style="font-size: 13px; color: #5b6470; margin-bottom: 24px;">
+    A compact variant (no descriptive paragraph) for replies:
+  </div>
+
+  <table cellpadding="0" cellspacing="0" border="0" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #0B0D10; line-height: 1.45;">
+    <tr>
+      <td style="padding-right: 14px; vertical-align: middle;">
+        <img
+          src="https://veritaslaw.app/brand/seal.png"
+          alt="Veritas"
+          width="36"
+          height="40"
+          style="display: block; border: 0;"
+        />
+      </td>
+      <td style="vertical-align: middle; font-size: 13px;">
+        <div style="font-weight: 600; color: #0B0D10;">Andrew Zoll</div>
+        <div style="font-size: 12px; color: #5B6470;">
+          Veritas ·
+          <a href="mailto:andrew@veritaslaw.app" style="color: #5B6470; text-decoration: none;">andrew@veritaslaw.app</a>
+        </div>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<div style="max-width: 720px; margin: 32px auto 0; font-size: 12px; color: #5b6470; line-height: 1.6;">
+  <strong>Notes:</strong> Once Google Workspace is configured and DNS verified,
+  upload this in Gmail at Settings → See all settings → Signatures.
+  If the seal image appears broken in recipients' inboxes, confirm that
+  <code>https://veritaslaw.app/brand/seal.png</code> resolves publicly.
+  Title and tagline are editable above; everything else self-renders from the hosted brand assets.
+</div>
+
+</body>
+</html>
