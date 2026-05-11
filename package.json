@@ -14,9 +14,9 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:generate": "dotenv -e .env.local -- drizzle-kit generate",
+    "db:push": "dotenv -e .env.local -- drizzle-kit push --force",
+    "db:studio": "dotenv -e .env.local -- drizzle-kit studio"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^3.0.112",
@@ -44,6 +44,7 @@
     "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv-cli": "^11.0.0",
     "drizzle-kit": "^0.31.10",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
