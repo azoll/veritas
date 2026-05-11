@@ -127,6 +127,34 @@ export type CLOpinion = {
  * Fetch the full plain-text body of an opinion by its opinion id.
  * Used for pincite/quote verification.
  */
+/**
+ * Fetch with retry-on-429 backoff. CL rate-limits per-token bursts on
+ * the cluster/opinion endpoints just like /citation-lookup/, so a single
+ * transient 429 was silently killing the treatment + pincite branches.
+ * Returns null only on real failure, never on a recoverable rate limit.
+ */
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit & { next?: { revalidate?: number } },
+): Promise<Response | null> {
+  const delays = [400, 1200, 3000];
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    let r: Response;
+    try {
+      r = await fetch(url, init);
+    } catch {
+      return null;
+    }
+    if (r.status === 429) {
+      if (attempt === delays.length) return r; // give caller the 429 to handle
+      await new Promise((res) => setTimeout(res, delays[attempt]));
+      continue;
+    }
+    return r;
+  }
+  return null;
+}
+
 function htmlToText(html: string): string {
   return html
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
@@ -143,11 +171,11 @@ function htmlToText(html: string): string {
 }
 
 export async function fetchOpinionText(opinionId: number): Promise<CLOpinion | null> {
-  const r = await fetch(`${BASE}/opinions/${opinionId}/`, {
+  const r = await fetchWithRetry(`${BASE}/opinions/${opinionId}/`, {
     headers: headers(),
     next: { revalidate: 86400 * 30 }, // opinions are immutable
   });
-  if (!r.ok) return null;
+  if (!r || !r.ok) return null;
   const data = (await r.json()) as {
     id: number;
     cluster_id: number;
@@ -183,11 +211,11 @@ export type CLCluster = {
 };
 
 export async function fetchCluster(clusterId: number): Promise<CLCluster | null> {
-  const r = await fetch(`${BASE}/clusters/${clusterId}/`, {
+  const r = await fetchWithRetry(`${BASE}/clusters/${clusterId}/`, {
     headers: headers(),
     next: { revalidate: 86400 },
   });
-  if (!r.ok) return null;
+  if (!r || !r.ok) return null;
   const d = (await r.json()) as {
     id: number;
     case_name: string;

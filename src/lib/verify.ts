@@ -271,6 +271,24 @@ async function verifyOneCitation(args: {
 
   // ── 2. Treatment ────────────────────────────────────────────────
   const cluster = await fetchCluster(hit.clusterId);
+  if (!cluster) {
+    // fetchCluster has retry-with-backoff; a null here means CL either
+    // exhausted retries or returned a non-OK status we don't recover
+    // from. Record the inconclusive result so the report doesn't
+    // misleadingly show "verified" on a citation we only half-checked.
+    await db.insert(schema.verifications).values({
+      citationId,
+      documentId,
+      kind: "treatment",
+      verdict: "unknown",
+      source: `courtlistener:cluster/${hit.clusterId}`,
+      sourceUrl: hit.absoluteUrl,
+      detail:
+        "Subsequent-treatment lookup was inconclusive (CourtListener cluster fetch failed). Recommend manual treatment check before relying on this authority.",
+      raw: { clusterId: hit.clusterId } as never,
+    });
+    rolled = worst(rolled, "unknown");
+  }
   if (cluster) {
     const status = cluster.precedentialStatus.toLowerCase();
     let tVerdict: Verdict = "verified";
