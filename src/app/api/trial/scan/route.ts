@@ -51,8 +51,10 @@ export async function POST(req: Request) {
   const fresh = !sessionId;
   if (!sessionId) sessionId = newTrialSessionId();
 
-  // Enforce 1-scan-per-trial-session limit
-  if (!fresh) {
+  // Enforce 1-scan-per-trial-session limit. Set TRIAL_CAP_DISABLED=1 in
+  // the Vercel env to bypass during internal testing; remove the flag to
+  // re-engage the cap.
+  if (!fresh && process.env.TRIAL_CAP_DISABLED !== "1") {
     const existing = await db
       .select({ id: schema.documents.id })
       .from(schema.documents)

@@ -12,9 +12,12 @@ export const dynamic = "force-dynamic";
 export default async function ScanPage() {
   const sessionId = (await cookies()).get(TRIAL_COOKIE)?.value;
 
-  // If they have a live trial scan, show it.
+  // If they have a live trial scan, show it. When the cap is disabled
+  // (internal testing), always render the upload form instead so we can
+  // re-submit without manually clearing the cookie.
+  const capDisabled = process.env.TRIAL_CAP_DISABLED === "1";
   let activeDoc: typeof schema.documents.$inferSelect | null = null;
-  if (sessionId) {
+  if (sessionId && !capDisabled) {
     const [row] = await db
       .select()
       .from(schema.documents)
