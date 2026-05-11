@@ -24,7 +24,7 @@ import {
 import {
   fetchCluster,
   fetchOpinionText,
-  searchByCitation,
+  lookupCitation,
   type CLOpinion,
 } from "@/lib/courtlistener";
 import { logAudit } from "@/lib/audit";
@@ -178,53 +178,96 @@ async function verifyOneCitation(args: {
   let rolled: Verdict = "verified";
 
   // ── 1. Existence ────────────────────────────────────────────────
+  // Use CourtListener's /citation-lookup/ endpoint rather than full-text
+  // search. Lookup resolves a parsed reporter cite to the actual case at
+  // that page — search ranks by text relevance and routinely returns the
+  // wrong opinion when another case happens to mention the citation.
   const query = `${cite.volume} ${cite.reporter} ${cite.page}`;
-  const hit = await searchByCitation(query);
+  const lookup = await lookupCitation(cite.volume, cite.reporter, cite.page);
 
-  if (!hit) {
-    rolled = worst(rolled, "risk");
+  if (!lookup.ok) {
+    // Distinguish "definitely not found" from "we couldn't tell".
+    // Rate limits or transient errors shouldn't be reported as
+    // fabrication risk; that would be a false accusation.
+    const isFabricationSignal = lookup.reason === "not_found";
+    rolled = worst(rolled, isFabricationSignal ? "risk" : "unknown");
     await db.insert(schema.verifications).values({
       citationId,
       documentId,
       kind: "existence",
-      verdict: "risk",
-      source: "courtlistener:search",
-      detail:
-        "No matching opinion found in CourtListener for this reporter citation. The citation may be mistyped, unreported, or otherwise not present in the corpus we searched. Recommend manual verification before filing.",
-      raw: { query } as never,
+      verdict: isFabricationSignal ? "risk" : "unknown",
+      source: "courtlistener:citation-lookup",
+      detail: isFabricationSignal
+        ? `No opinion is published at ${query} in CourtListener's corpus. This is the typical signal for a hallucinated or mistyped citation; recommend verifying against the official reporter before filing.`
+        : `Verification was inconclusive (CourtListener returned ${lookup.reason}). Recommend manual lookup before filing.`,
+      raw: { query, reason: lookup.reason } as never,
     });
     await db
       .update(schema.citations)
       .set({
         verdict: rolled,
-        notes: "No matching opinion located — manual verification recommended.",
+        notes: isFabricationSignal
+          ? "No opinion published at this citation — possible fabrication."
+          : "Verification inconclusive — manual lookup recommended.",
       })
       .where(eq(schema.citations.id, citationId));
     return rolled;
   }
 
-  let nameMismatch = false;
+  // We have a hit. Compare case-name similarity to detect the more
+  // subtle failure mode: real citation, but the brief styles it as a
+  // different case (sometimes a typo, sometimes a sign the cite was
+  // pasted in from an unrelated source).
+  let nameVerdict: Verdict = "verified";
+  let nameDetail = `Located ${lookup.caseName} at ${query}.`;
   if (cite.caseName) {
     const norm = (s: string) =>
       s.toLowerCase().replace(/[^a-z0-9 v]/g, " ").replace(/\s+/g, " ").trim();
     const a = norm(cite.caseName);
-    const b = norm(hit.caseName);
-    nameMismatch = !a.split(" v ").some((part) => part && b.includes(part));
+    const b = norm(lookup.caseName);
+
+    // Token-overlap: how many distinct meaningful words from the brief's
+    // case-name appear in CourtListener's. < 50% overlap means the names
+    // are radically different — almost certainly the wrong case at this
+    // citation, which is a fabrication-grade signal, not a styling note.
+    const stop = new Set(["v", "the", "of", "and", "co", "corp", "inc", "ltd", "llc"]);
+    const tokensA = a.split(" ").filter((t) => t.length > 1 && !stop.has(t));
+    const tokensB = new Set(b.split(" ").filter((t) => t.length > 1 && !stop.has(t)));
+    const overlap = tokensA.filter((t) => tokensB.has(t)).length;
+    const ratio = tokensA.length > 0 ? overlap / tokensA.length : 1;
+
+    if (ratio < 0.34) {
+      nameVerdict = "risk";
+      nameDetail = `CourtListener reports ${query} as ${lookup.caseName}, but the brief cites it as "${cite.caseName}". The names share no meaningful overlap — this is the pattern for an incorrect or fabricated citation. Verify before filing.`;
+    } else if (ratio < 0.75) {
+      nameVerdict = "warning";
+      nameDetail = `Located ${lookup.caseName} at ${query}; the brief styles it as "${cite.caseName}". Some name overlap, but not a full match — verify the citation references the intended case.`;
+    }
   }
 
   await db.insert(schema.verifications).values({
     citationId,
     documentId,
     kind: "existence",
-    verdict: nameMismatch ? "warning" : "verified",
-    source: `courtlistener:cluster/${hit.clusterId}`,
-    sourceUrl: hit.absoluteUrl,
-    detail: nameMismatch
-      ? `Located ${hit.caseName} at ${query}; the brief styles it as "${cite.caseName}". Verify the case name aligns with the citation.`
-      : `Located ${hit.caseName} at ${query}.`,
-    raw: { hit } as never,
+    verdict: nameVerdict,
+    source: `courtlistener:cluster/${lookup.clusterId}`,
+    sourceUrl: lookup.absoluteUrl,
+    detail: nameDetail,
+    raw: { lookup } as never,
   });
-  if (nameMismatch) rolled = worst(rolled, "warning");
+  if (nameVerdict !== "verified") rolled = worst(rolled, nameVerdict);
+
+  // Construct a synthesized "hit" for downstream code that still
+  // expects the old shape.
+  const hit = {
+    id: 0,
+    caseName: lookup.caseName,
+    citation: [],
+    court: "",
+    dateFiled: "",
+    absoluteUrl: lookup.absoluteUrl,
+    clusterId: lookup.clusterId,
+  };
 
   // ── 2. Treatment ────────────────────────────────────────────────
   const cluster = await fetchCluster(hit.clusterId);

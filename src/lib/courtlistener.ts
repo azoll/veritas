@@ -31,42 +31,73 @@ export type CLOpinionSearchHit = {
 };
 
 /**
- * Look up an opinion by free-text citation, e.g. "410 U.S. 113".
- * Returns the top match, or null if nothing scored high enough.
+ * Look up the case at a specific reporter citation via CourtListener's
+ * `/citation-lookup/` endpoint. This is fundamentally different from a
+ * full-text search:
+ *
+ *   - Full-text search ranks by text relevance; the top hit for "329
+ *     U.S. 495" can easily be a different opinion that happens to
+ *     mention the citation in its body.
+ *   - Citation lookup parses the cite and resolves it to the actual
+ *     case published at that volume + reporter + page.
+ *
+ * For verification work we want the latter — exact match or nothing,
+ * because "the case at this citation" is a specific factual claim.
+ *
+ * Status codes (per CourtListener):
+ *   200  single match
+ *   300  ambiguous (multiple matches; we take the first)
+ *   404  no case at this citation — the fabrication signal
+ *   429  rate limited (treat as inconclusive)
  */
-export async function searchByCitation(
-  query: string,
-): Promise<CLOpinionSearchHit | null> {
-  const url = new URL(`${BASE}/search/`);
-  url.searchParams.set("type", "o");
-  url.searchParams.set("q", query);
-  url.searchParams.set("order_by", "score desc");
+export type CLLookupResult =
+  | { ok: true; clusterId: number; caseName: string; absoluteUrl: string }
+  | { ok: false; reason: "not_found" | "rate_limited" | "error" };
 
-  const r = await fetch(url, { headers: headers(), next: { revalidate: 86400 } });
-  if (!r.ok) return null;
-  const data = (await r.json()) as {
-    results?: Array<{
-      id: number;
-      caseName: string;
-      citation?: string[];
-      court: string;
-      dateFiled: string;
-      absolute_url: string;
-      cluster_id: number;
-      snippet?: string;
-    }>;
-  };
-  const hit = data.results?.[0];
-  if (!hit) return null;
+export async function lookupCitation(
+  volume: string,
+  reporter: string,
+  page: string,
+): Promise<CLLookupResult> {
+  // Reconstruct a canonical-looking citation string. The endpoint also
+  // accepts volume/reporter/page as separate fields, but the text form
+  // is more forgiving of reporter-name variants (e.g. "F.3d" vs
+  // "F. 3d").
+  const text = `${volume} ${reporter} ${page}`;
+  const body = new URLSearchParams({ text }).toString();
+
+  let r: Response;
+  try {
+    r = await fetch(`${BASE}/citation-lookup/`, {
+      method: "POST",
+      headers: {
+        ...headers(),
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body,
+    });
+  } catch {
+    return { ok: false, reason: "error" };
+  }
+  if (!r.ok) {
+    return { ok: false, reason: r.status === 429 ? "rate_limited" : "error" };
+  }
+  const data = (await r.json()) as Array<{
+    citation: string;
+    status: number;
+    clusters: Array<{ id: number; case_name: string; absolute_url: string }>;
+  }>;
+  const item = data[0];
+  if (!item) return { ok: false, reason: "error" };
+  if (item.status === 404) return { ok: false, reason: "not_found" };
+  if (item.status === 429) return { ok: false, reason: "rate_limited" };
+  const c = item.clusters[0];
+  if (!c) return { ok: false, reason: "not_found" };
   return {
-    id: hit.id,
-    caseName: hit.caseName,
-    citation: hit.citation ?? [],
-    court: hit.court,
-    dateFiled: hit.dateFiled,
-    absoluteUrl: `https://www.courtlistener.com${hit.absolute_url}`,
-    clusterId: hit.cluster_id,
-    snippet: hit.snippet,
+    ok: true,
+    clusterId: c.id,
+    caseName: c.case_name,
+    absoluteUrl: `https://www.courtlistener.com${c.absolute_url}`,
   };
 }
 

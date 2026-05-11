@@ -62,6 +62,14 @@ export function TrialResult({ documentId }: { documentId: string }) {
     const tick = async () => {
       try {
         const r = await fetch(`/api/trial/${documentId}`);
+        // 410 = the trial doc expired or was cleaned up. Clear the
+        // stale trial cookie and reload so the user lands back on the
+        // upload form instead of a dead-end error.
+        if (r.status === 410) {
+          document.cookie = "v_trial=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+          window.location.href = "/scan";
+          return;
+        }
         if (!r.ok) throw new Error(`(${r.status})`);
         const j = await r.json();
         if (cancelled) return;
