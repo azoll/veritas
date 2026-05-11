@@ -25,7 +25,9 @@ export type PropositionResult = z.infer<typeof PropositionSchema> & {
 };
 
 export function aiAvailable(): boolean {
-  return !!process.env.AI_GATEWAY_API_KEY;
+  // Explicit gateway key OR Vercel-injected OIDC token (auto-present on
+  // every Vercel deployment) is enough to call the AI Gateway.
+  return !!(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN);
 }
 
 export async function checkProposition(args: {

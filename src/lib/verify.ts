@@ -174,7 +174,8 @@ async function verifyOneCitation(args: {
   quoted?: string;
   deepScan: boolean;
 }): Promise<Verdict> {
-  const { citationId, documentId, cite, quoted, deepScan } = args;
+  const { citationId, documentId, cite, quoted } = args;
+  void args.deepScan; // reserved for future tier-gated extras
   let rolled: Verdict = "verified";
 
   // ── 1. Existence ────────────────────────────────────────────────
@@ -311,11 +312,11 @@ async function verifyOneCitation(args: {
   }
 
   // Fetch the majority opinion ONCE — both pincite and proposition need it.
-  // CL clusters can list several sub-opinions (syllabus, majority,
-  // concurrences, dissents); the first isn't always the body of the
-  // decision. Walk them until one returns substantive text.
+  // Every report surfaces three things: existence, quotation (if
+  // applicable), and proposition support — so we always need opinion
+  // text, not just when a quote was attributed.
   let opinion: CLOpinion | null = null;
-  if (cluster?.subOpinions?.length && (quoted || deepScan)) {
+  if (cluster?.subOpinions?.length) {
     for (const url of cluster.subOpinions) {
       const opIdMatch = url.match(/\/(\d+)\/?$/);
       const opinionId = opIdMatch ? Number(opIdMatch[1]) : null;
@@ -329,7 +330,35 @@ async function verifyOneCitation(args: {
   }
 
   // ── 3. Pincite / quote ─────────────────────────────────────────
-  if (quoted && opinion?.plainText) {
+  // Always emit a pincite row so the report has the three guaranteed
+  // sections per citation. "Not applicable" when no quote was attributed
+  // is a real, useful answer — better than the section silently missing.
+  if (!quoted) {
+    await db.insert(schema.verifications).values({
+      citationId,
+      documentId,
+      kind: "pincite",
+      verdict: "verified",
+      source: "veritas:extract",
+      sourceUrl: hit.absoluteUrl,
+      detail:
+        "No direct quotation attributed to this citation in the brief. Nothing to verify against the opinion text.",
+      raw: { applicable: false } as never,
+    });
+  } else if (!opinion?.plainText) {
+    await db.insert(schema.verifications).values({
+      citationId,
+      documentId,
+      kind: "pincite",
+      verdict: "unknown",
+      source: `courtlistener:cluster/${hit.clusterId}`,
+      sourceUrl: hit.absoluteUrl,
+      detail:
+        "Quotation check was inconclusive — the opinion text wasn't available in CourtListener for comparison. Recommend manual verification against the official reporter.",
+      raw: { quoted } as never,
+    });
+    rolled = worst(rolled, "unknown");
+  } else {
     const { hit: qHit, score } = quoteAppears(quoted, opinion.plainText);
     const qVerdict: Verdict = qHit
       ? score >= 95
@@ -360,15 +389,71 @@ async function verifyOneCitation(args: {
     rolled = worst(rolled, qVerdict);
   }
 
-  // ── 4. Proposition (deep scan only) ────────────────────────────
-  if (deepScan && opinion?.plainText && cite.contextSnippet && aiAvailable()) {
+  // ── 4. Proposition support ─────────────────────────────────────
+  // Always surfaced — answers "does the cited case actually support the
+  // argument being made?" This is the core promise of the platform, not
+  // an upsell. When the opinion text or AI isn't available, emit a
+  // clearly-marked inconclusive row instead of silently skipping.
+  if (!opinion?.plainText) {
+    await db.insert(schema.verifications).values({
+      citationId,
+      documentId,
+      kind: "proposition",
+      verdict: "unknown",
+      source: `courtlistener:cluster/${hit.clusterId}`,
+      sourceUrl: hit.absoluteUrl,
+      detail:
+        "Proposition-support check was inconclusive — the opinion text wasn't available in CourtListener. Recommend manually confirming this authority supports the argument.",
+      raw: { reason: "no_opinion_text" } as never,
+    });
+    rolled = worst(rolled, "unknown");
+  } else if (!cite.contextSnippet) {
+    await db.insert(schema.verifications).values({
+      citationId,
+      documentId,
+      kind: "proposition",
+      verdict: "unknown",
+      source: "veritas:extract",
+      sourceUrl: hit.absoluteUrl,
+      detail:
+        "Proposition-support check was inconclusive — no surrounding argument text was captured around this citation.",
+      raw: { reason: "no_context" } as never,
+    });
+    rolled = worst(rolled, "unknown");
+  } else if (!aiAvailable()) {
+    await db.insert(schema.verifications).values({
+      citationId,
+      documentId,
+      kind: "proposition",
+      verdict: "unknown",
+      source: "veritas:ai",
+      sourceUrl: hit.absoluteUrl,
+      detail:
+        "Proposition-support check was unavailable — the verification model is offline. Recommend manual review.",
+      raw: { reason: "ai_unavailable" } as never,
+    });
+    rolled = worst(rolled, "unknown");
+  } else {
     const result = await checkProposition({
       caseName: hit.caseName,
       citation: query,
       opinionText: opinion.plainText,
       proposition: cite.contextSnippet,
     });
-    if (result) {
+    if (!result) {
+      await db.insert(schema.verifications).values({
+        citationId,
+        documentId,
+        kind: "proposition",
+        verdict: "unknown",
+        source: "veritas:ai",
+        sourceUrl: hit.absoluteUrl,
+        detail:
+          "Proposition-support check was inconclusive — the verification model returned an error. Recommend manual review.",
+        raw: { reason: "ai_error" } as never,
+      });
+      rolled = worst(rolled, "unknown");
+    } else {
       const pVerdict: Verdict =
         result.verdict === "supports"
           ? "verified"
