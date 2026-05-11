@@ -66,39 +66,54 @@ export async function lookupCitation(
   const text = `${volume} ${reporter} ${page}`;
   const body = new URLSearchParams({ text }).toString();
 
-  let r: Response;
-  try {
-    r = await fetch(`${BASE}/citation-lookup/`, {
-      method: "POST",
-      headers: {
-        ...headers(),
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body,
-    });
-  } catch {
-    return { ok: false, reason: "error" };
+  // Retry on transient rate limits — both transport-level 429 and the
+  // item-level `status: 429` CL returns inside a 200 body. CL throttles
+  // per-token bursts; a short pause usually clears it, and turning
+  // transient rate limits into "unknown" verdicts erodes signal.
+  const delays = [400, 1200, 3000];
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    let r: Response;
+    try {
+      r = await fetch(`${BASE}/citation-lookup/`, {
+        method: "POST",
+        headers: {
+          ...headers(),
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body,
+      });
+    } catch {
+      return { ok: false, reason: "error" };
+    }
+    if (r.status === 429) {
+      if (attempt === delays.length) return { ok: false, reason: "rate_limited" };
+      await new Promise((res) => setTimeout(res, delays[attempt]));
+      continue;
+    }
+    if (!r.ok) return { ok: false, reason: "error" };
+    const data = (await r.json()) as Array<{
+      citation: string;
+      status: number;
+      clusters: Array<{ id: number; case_name: string; absolute_url: string }>;
+    }>;
+    const item = data[0];
+    if (!item) return { ok: false, reason: "error" };
+    if (item.status === 429) {
+      if (attempt === delays.length) return { ok: false, reason: "rate_limited" };
+      await new Promise((res) => setTimeout(res, delays[attempt]));
+      continue;
+    }
+    if (item.status === 404) return { ok: false, reason: "not_found" };
+    const c = item.clusters[0];
+    if (!c) return { ok: false, reason: "not_found" };
+    return {
+      ok: true,
+      clusterId: c.id,
+      caseName: c.case_name,
+      absoluteUrl: `https://www.courtlistener.com${c.absolute_url}`,
+    };
   }
-  if (!r.ok) {
-    return { ok: false, reason: r.status === 429 ? "rate_limited" : "error" };
-  }
-  const data = (await r.json()) as Array<{
-    citation: string;
-    status: number;
-    clusters: Array<{ id: number; case_name: string; absolute_url: string }>;
-  }>;
-  const item = data[0];
-  if (!item) return { ok: false, reason: "error" };
-  if (item.status === 404) return { ok: false, reason: "not_found" };
-  if (item.status === 429) return { ok: false, reason: "rate_limited" };
-  const c = item.clusters[0];
-  if (!c) return { ok: false, reason: "not_found" };
-  return {
-    ok: true,
-    clusterId: c.id,
-    caseName: c.case_name,
-    absoluteUrl: `https://www.courtlistener.com${c.absolute_url}`,
-  };
+  return { ok: false, reason: "rate_limited" };
 }
 
 export type CLOpinion = {
@@ -112,6 +127,21 @@ export type CLOpinion = {
  * Fetch the full plain-text body of an opinion by its opinion id.
  * Used for pincite/quote verification.
  */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export async function fetchOpinionText(opinionId: number): Promise<CLOpinion | null> {
   const r = await fetch(`${BASE}/opinions/${opinionId}/`, {
     headers: headers(),
@@ -125,11 +155,18 @@ export async function fetchOpinionText(opinionId: number): Promise<CLOpinion | n
     html?: string;
     html_with_citations?: string;
   };
+  // CL frequently stores the body in html_with_citations only (older
+  // SCOTUS opinions especially). Fall back to a stripped version so the
+  // pincite/proposition checks have substrate to work with.
+  const html = data.html || data.html_with_citations || "";
+  const plainText = (data.plain_text && data.plain_text.length > 50)
+    ? data.plain_text
+    : (html ? htmlToText(html) : "");
   return {
     id: data.id,
     clusterId: data.cluster_id,
-    plainText: data.plain_text ?? "",
-    html: data.html ?? data.html_with_citations ?? "",
+    plainText,
+    html,
   };
 }
 

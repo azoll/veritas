@@ -293,11 +293,21 @@ async function verifyOneCitation(args: {
   }
 
   // Fetch the majority opinion ONCE — both pincite and proposition need it.
+  // CL clusters can list several sub-opinions (syllabus, majority,
+  // concurrences, dissents); the first isn't always the body of the
+  // decision. Walk them until one returns substantive text.
   let opinion: CLOpinion | null = null;
   if (cluster?.subOpinions?.length && (quoted || deepScan)) {
-    const opIdMatch = cluster.subOpinions[0]?.match(/\/(\d+)\/?$/);
-    const opinionId = opIdMatch ? Number(opIdMatch[1]) : null;
-    if (opinionId) opinion = await fetchOpinionText(opinionId);
+    for (const url of cluster.subOpinions) {
+      const opIdMatch = url.match(/\/(\d+)\/?$/);
+      const opinionId = opIdMatch ? Number(opIdMatch[1]) : null;
+      if (!opinionId) continue;
+      const candidate = await fetchOpinionText(opinionId);
+      if (candidate?.plainText && candidate.plainText.length > 500) {
+        opinion = candidate;
+        break;
+      }
+    }
   }
 
   // ── 3. Pincite / quote ─────────────────────────────────────────
