@@ -1,10 +1,19 @@
+"use client";
+
+import { CreateOrganization } from "@clerk/nextjs";
+
+/**
+ * Rendered when an authenticated user has no active Clerk organization.
+ * Inline `CreateOrganization` lets them name their firm and proceed
+ * without bouncing back to a separate flow.
+ */
 export function EmptyScope() {
   return (
     <div
       style={{
         maxWidth: 640,
         margin: "0 auto",
-        padding: "96px 24px",
+        padding: "72px 24px",
         textAlign: "center",
       }}
     >
@@ -14,16 +23,16 @@ export function EmptyScope() {
           fontSize: 11,
           letterSpacing: "0.16em",
           textTransform: "uppercase",
-          color: "var(--fg-3)",
+          color: "var(--gold)",
         }}
       >
-        Pick or create a firm
+        Name your firm
       </div>
       <h2
         style={{
           marginTop: 12,
           fontFamily: "var(--font-serif)",
-          fontSize: 48,
+          fontSize: 44,
           fontWeight: 400,
           letterSpacing: "-0.02em",
           lineHeight: 1.05,
@@ -31,11 +40,23 @@ export function EmptyScope() {
       >
         Veritas is multi-tenant.
       </h2>
-      <p style={{ marginTop: 16, color: "var(--fg-2)", lineHeight: 1.6 }}>
-        Use the organization switcher above to choose a firm to work in, or
-        create a new one. All filings, citations, and audit trails are
-        scoped per firm.
+      <p
+        style={{
+          marginTop: 16,
+          color: "var(--fg-2)",
+          lineHeight: 1.6,
+          fontSize: 15,
+        }}
+      >
+        Every filing, citation, and audit trail is scoped per firm.
+        Create yours below to continue.
       </p>
+      <div style={{ marginTop: 40, display: "flex", justifyContent: "center" }}>
+        <CreateOrganization
+          afterCreateOrganizationUrl="/dashboard"
+          skipInvitationScreen
+        />
+      </div>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { put } from "@vercel/blob";
+import { waitUntil } from "@vercel/functions";
 import { eq } from "drizzle-orm";
 import { requireScope } from "@/lib/auth/scope";
 import { db, schema } from "@/lib/db";
@@ -6,7 +7,7 @@ import { parseDocument } from "@/lib/parse";
 import { logAudit } from "@/lib/audit";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 /**
  * POST /api/documents — upload a brief.
@@ -103,16 +104,18 @@ export async function POST(req: Request) {
     payload: { filename: file.name, sizeBytes: buf.byteLength },
   });
 
-  // Fire-and-forget verification; don't block the upload response.
-  // In production this moves to Vercel Workflow; for MVP we await
-  // because Fluid Compute can extend execution past the response.
-  void import("@/lib/verify").then(({ verifyDocument }) =>
-    verifyDocument(doc.id, scope.firmId).catch(async (e) => {
-      await db
-        .update(schema.documents)
-        .set({ status: "failed", error: (e as Error).message })
-        .where(eq(schema.documents.id, doc.id));
-    }),
+  // Verification runs in the background past the response via waitUntil.
+  // Without this, Vercel terminates the function as soon as we respond
+  // and the per-citation CourtListener / LLM calls never complete.
+  waitUntil(
+    import("@/lib/verify").then(({ verifyDocument }) =>
+      verifyDocument(doc.id, scope.firmId).catch(async (e) => {
+        await db
+          .update(schema.documents)
+          .set({ status: "failed", error: (e as Error).message })
+          .where(eq(schema.documents.id, doc.id));
+      }),
+    ),
   );
 
   return Response.json({ id: doc.id });

@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { put } from "@vercel/blob";
+import { waitUntil } from "@vercel/functions";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { parseDocument } from "@/lib/parse";
@@ -13,7 +14,11 @@ import {
 } from "@/lib/trial";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+// Verification continues in the background via waitUntil; the request
+// itself returns as soon as the upload is parsed and queued. Generous
+// timeout so the background verification has room for CourtListener
+// lookups + optional LLM proposition checks.
+export const maxDuration = 300;
 
 /**
  * Anonymous trial upload. Allows ONE standard scan without auth; result is
@@ -137,13 +142,20 @@ export async function POST(req: Request) {
     payload: { filename: file.name, sessionId },
   });
 
-  void import("@/lib/verify").then(({ verifyDocument }) =>
-    verifyDocument(doc.id, firm.id).catch(async (e) => {
-      await db
-        .update(schema.documents)
-        .set({ status: "failed", error: (e as Error).message })
-        .where(eq(schema.documents.id, doc.id));
-    }),
+  // Run verification in the background. waitUntil keeps the function
+  // instance alive past the response so the per-citation CourtListener
+  // and LLM calls actually complete. Without this, Vercel terminates
+  // the runtime as soon as the response is sent and verification stalls
+  // mid-loop (the "fire-and-forget" anti-pattern in serverless).
+  waitUntil(
+    import("@/lib/verify").then(({ verifyDocument }) =>
+      verifyDocument(doc.id, firm.id).catch(async (e) => {
+        await db
+          .update(schema.documents)
+          .set({ status: "failed", error: (e as Error).message })
+          .where(eq(schema.documents.id, doc.id));
+      }),
+    ),
   );
 
   const res = Response.json({ id: doc.id, trial: true });
