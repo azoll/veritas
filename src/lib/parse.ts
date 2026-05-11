@@ -1,5 +1,5 @@
 import mammoth from "mammoth";
-import { PDFParse } from "pdf-parse";
+import { extractText, getDocumentProxy } from "unpdf";
 
 export type ParsedDocument = {
   text: string;
@@ -7,6 +7,16 @@ export type ParsedDocument = {
   pages?: number;
 };
 
+/**
+ * Parse a brief into plain text for citation extraction.
+ *
+ * - PDF: routed through `unpdf` rather than `pdf-parse`. Both wrap pdfjs,
+ *   but unpdf is specifically built for serverless Node runtimes (no
+ *   browser-global dependencies like `DOMMatrix`, `Path2D`, `ImageData`
+ *   that crash on Vercel Fluid Compute).
+ * - DOCX: mammoth, which is pure-JS and serverless-safe.
+ * - Fallback: treat as UTF-8 text.
+ */
 export async function parseDocument(
   buf: ArrayBuffer,
   mime: string,
@@ -20,12 +30,10 @@ export async function parseDocument(
     ext === "docx";
 
   if (isPdf) {
-    const parser = new PDFParse({ data: new Uint8Array(buf) });
-    const result = await parser.getText();
-    return {
-      text: result.text ?? "",
-      pages: result.pages?.length ?? result.total ?? undefined,
-    };
+    const pdf = await getDocumentProxy(new Uint8Array(buf));
+    const result = await extractText(pdf, { mergePages: true });
+    const text = Array.isArray(result.text) ? result.text.join("\n") : result.text;
+    return { text, pages: result.totalPages };
   }
   if (isDocx) {
     const result = await mammoth.extractRawText({
