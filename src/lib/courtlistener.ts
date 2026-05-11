@@ -67,10 +67,11 @@ export async function lookupCitation(
   const body = new URLSearchParams({ text }).toString();
 
   // Retry on transient rate limits — both transport-level 429 and the
-  // item-level `status: 429` CL returns inside a 200 body. CL throttles
-  // per-token bursts; a short pause usually clears it, and turning
-  // transient rate limits into "unknown" verdicts erodes signal.
-  const delays = [400, 1200, 3000];
+  // item-level `status: 429` CL returns inside a 200 body. Vercel
+  // serverless egress shares IPs with thousands of other apps, so CL's
+  // per-IP throttle hits us harder than a local dev box. Longer windows
+  // (~30s total) get us across most bursts.
+  const delays = [1000, 3000, 8000, 20000];
   for (let attempt = 0; attempt <= delays.length; attempt++) {
     let r: Response;
     try {
@@ -137,7 +138,10 @@ async function fetchWithRetry(
   url: string,
   init: RequestInit & { next?: { revalidate?: number } },
 ): Promise<Response | null> {
-  const delays = [400, 1200, 3000];
+  // CL throttles aggressively on Vercel's shared egress IPs even with a
+  // valid token, so the windows have to be longer than they'd need to be
+  // on a dedicated IP. ~30s of total backoff lets a transient burst clear.
+  const delays = [1000, 3000, 8000, 20000];
   for (let attempt = 0; attempt <= delays.length; attempt++) {
     let r: Response;
     try {
