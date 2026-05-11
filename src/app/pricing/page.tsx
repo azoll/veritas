@@ -8,55 +8,57 @@ const TIERS = [
     name: "Trial",
     price: "Free",
     cadence: "no card required",
-    summary: "One filing, results held 24 hours.",
+    summary: "One filing. We send the review and a Verification Certificate.",
     bullets: [
-      "1 standard scan",
-      "Citation existence & treatment",
-      "Pincite / quotation match",
-      "Auto-expires in 24h",
+      "1 filing review",
+      "Citation, quotation, and treatment check",
+      "Verification Certificate by email",
+      "Result retained 24 hours",
     ],
-    cta: { label: "Run a scan", href: "/scan" },
+    cta: { label: "Run a review", href: "/scan" },
     accent: false,
   },
   {
     name: "Solo",
-    price: "$149",
+    price: "$199",
     cadence: "per month",
     summary: "Single attorney. Cover the work that already goes out the door.",
     bullets: [
-      "25 standard scans / mo",
-      "5 deep scans / mo (proposition validation)",
-      "Signed risk-report PDFs",
-      "30-day result retention",
+      "15 filing reviews / month",
+      "Citation · quotation · treatment · proposition review",
+      "Signed Verification Certificate per filing",
+      "Result retained 30 days",
+      "Email support",
     ],
     cta: { label: "Start Solo", href: "/sign-up?plan=solo" },
     accent: false,
   },
   {
-    name: "Solo+",
-    price: "$299",
+    name: "Team",
+    price: "$999",
     cadence: "per month",
-    summary: "High-volume solo. Appellate, motion-heavy practices.",
+    summary: "Boutique litigation firms. Pooled review quota across the team.",
     bullets: [
-      "100 standard scans / mo",
-      "25 deep scans / mo",
-      "Signed risk-report PDFs",
+      "100 filing reviews / month",
+      "All Solo features",
+      "Up to 10 attorneys, shared pool",
+      "Adversarial review (Phase 1)",
       "Read-only review URLs",
       "Priority queue",
     ],
-    cta: { label: "Start Solo+", href: "/sign-up?plan=solo-plus" },
+    cta: { label: "Start Team", href: "/sign-up?plan=team" },
     accent: true,
   },
   {
     name: "Firm",
-    price: "$999",
-    cadence: "starting / month",
-    summary: "Team usage, pooled scan quota, governance baseline.",
+    price: "$2,499",
+    cadence: "per month",
+    summary: "Mid-sized litigation firms. Internal governance baseline.",
     bullets: [
-      "5-seat minimum, $99 / seat add-on",
-      "Pooled 500 standard / 100 deep scans",
-      "Adversarial review (Phase 1)",
-      "SSO, audit export, team sub-tenants",
+      "500 filing reviews / month",
+      "All Team features",
+      "SSO, audit export, sub-tenants",
+      "Custom severity policy",
       "Annual commit available",
     ],
     cta: { label: "Talk to us", href: "mailto:hello@veritas.law" },
@@ -69,7 +71,12 @@ export default function PricingPage() {
     <div>
       <Nav />
 
-      <section style={{ borderBottom: "1px solid var(--hair)", padding: "112px 40px 72px" }}>
+      <section
+        style={{
+          borderBottom: "1px solid var(--hair)",
+          padding: "112px 40px 72px",
+        }}
+      >
         <div style={{ maxWidth: 1440, margin: "0 auto" }}>
           <div className="v-eyebrow" style={{ marginBottom: 24 }}>
             Pricing
@@ -84,7 +91,7 @@ export default function PricingPage() {
               letterSpacing: "-0.02em",
             }}
           >
-            Priced per filing.
+            Priced per filing review.
             <br />
             Not per token.
           </h1>
@@ -97,10 +104,11 @@ export default function PricingPage() {
               color: "var(--fg-2)",
             }}
           >
-            A scan is the unit lawyers understand: one brief, one motion,
-            one memo. Veritas verifies citations, validates quotations, and
-            generates a signed defensibility report. Pricing scales with
-            filing volume, not with infrastructure cost.
+            A filing review is one brief, motion, or memo run through the
+            Veritas pipeline. Every review checks citations, validates
+            quotations, surfaces negative treatment, evaluates proposition
+            support, and produces a hashed, time-stamped Verification
+            Certificate that travels with the filing.
           </p>
         </div>
       </section>
@@ -119,7 +127,8 @@ export default function PricingPage() {
                 key={t.name}
                 style={{
                   padding: "40px 28px 32px",
-                  borderRight: i < TIERS.length - 1 ? "1px solid var(--hair)" : 0,
+                  borderRight:
+                    i < TIERS.length - 1 ? "1px solid var(--hair)" : 0,
                   background: t.accent ? "var(--obsidian-2)" : "transparent",
                   display: "flex",
                   flexDirection: "column",
@@ -206,6 +215,29 @@ export default function PricingPage() {
               </article>
             ))}
           </div>
+          <div
+            style={{
+              marginTop: 16,
+              padding: "16px 20px",
+              border: "1px solid var(--hair)",
+              background: "var(--bg-raised)",
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              letterSpacing: "0.04em",
+              color: "var(--fg-3)",
+              lineHeight: 1.6,
+            }}
+          >
+            ENTERPRISE · Custom pricing for governance, compliance reporting,
+            on-prem, and insurer integrations. Talk to us at{" "}
+            <a
+              href="mailto:hello@veritas.law"
+              style={{ color: "var(--fg-2)" }}
+            >
+              hello@veritas.law
+            </a>
+            .
+          </div>
         </div>
       </section>
 
@@ -228,16 +260,90 @@ export default function PricingPage() {
         >
           <div>
             <div className="v-eyebrow" style={{ marginBottom: 24 }}>
+              Pilot members
+            </div>
+            <h2
+              style={{
+                margin: "0 0 24px",
+                fontFamily: "var(--font-serif)",
+                fontSize: 40,
+                fontWeight: 400,
+                lineHeight: 1.1,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              Our first attorneys are pilot members.
+            </h2>
+            <p
+              style={{
+                margin: 0,
+                color: "var(--fg-2)",
+                fontSize: 15,
+                lineHeight: 1.65,
+              }}
+            >
+              For the first cohort, every filing is reviewed by Veritas
+              software and double-checked by a real person on our team.
+              You get a direct line, calibration on edge cases, and your
+              feedback shapes the product. Same pricing, additional
+              hand-holding. Mention &ldquo;pilot&rdquo; when you sign up.
+            </p>
+          </div>
+          <div
+            style={{
+              border: "1px solid var(--hair-strong)",
+              padding: "28px",
+              background: "var(--obsidian)",
+              display: "grid",
+              gridTemplateColumns: "auto 1fr",
+              gap: "14px 24px",
+              fontFamily: "var(--font-mono)",
+              fontSize: 13,
+            }}
+          >
+            <span style={{ color: "var(--fg-3)" }}>Cohort</span>
+            <span style={{ color: "var(--fg)" }}>First 10 firms</span>
+            <span style={{ color: "var(--fg-3)" }}>Onboarding</span>
+            <span style={{ color: "var(--fg)" }}>30-minute call · 1:1</span>
+            <span style={{ color: "var(--fg-3)" }}>Review check</span>
+            <span style={{ color: "var(--fg)" }}>Every filing, by hand</span>
+            <span style={{ color: "var(--fg-3)" }}>Feedback loop</span>
+            <span style={{ color: "var(--fg)" }}>Direct to founders</span>
+            <span style={{ color: "var(--fg-3)" }}>Pricing</span>
+            <span style={{ color: "var(--fg)" }}>Standard tiers</span>
+          </div>
+        </div>
+      </section>
+
+      <section
+        style={{
+          borderBottom: "1px solid var(--hair)",
+          background: "var(--obsidian-2)",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1100,
+            margin: "0 auto",
+            padding: "80px 40px",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 64,
+            alignItems: "center",
+          }}
+        >
+          <div>
+            <div className="v-eyebrow" style={{ marginBottom: 24 }}>
               The math
             </div>
             <h2
               style={{
                 margin: "0 0 24px",
                 fontFamily: "var(--font-serif)",
-                fontSize: 48,
+                fontSize: 40,
                 fontWeight: 400,
-                lineHeight: 1.05,
-                letterSpacing: "-0.02em",
+                lineHeight: 1.1,
+                letterSpacing: "-0.01em",
               }}
             >
               One avoided sanction pays for years of Veritas.
@@ -252,36 +358,38 @@ export default function PricingPage() {
             >
               Published monetary sanctions for AI-fabricated citations have
               ranged from $5,000 to more than $100,000 — before counting
-              cost orders, fee-shifting, disqualification, and bar referrals.
-              A $5,000 sanction is thirty-three months of Solo. A
-              $109,700 sanction is sixty-one years.
+              cost orders, fee-shifting, disqualification, and bar
+              referrals. A $5,000 sanction is twenty-five months of Solo. A
+              $109,700 sanction is forty-six years.
             </p>
           </div>
           <div
             style={{
               border: "1px solid var(--hair-strong)",
-              padding: "32px",
+              padding: "28px",
               background: "var(--obsidian)",
               display: "grid",
               gridTemplateColumns: "auto 1fr",
-              gap: "16px 24px",
+              gap: "14px 24px",
               fontFamily: "var(--font-mono)",
               fontSize: 13,
             }}
           >
             <span style={{ color: "var(--fg-3)" }}>$5,000</span>
-            <span style={{ color: "var(--fg)" }}>33 months · Solo</span>
+            <span style={{ color: "var(--fg)" }}>25 months · Solo</span>
             <span style={{ color: "var(--fg-3)" }}>$10,000</span>
-            <span style={{ color: "var(--fg)" }}>67 months · Solo</span>
+            <span style={{ color: "var(--fg)" }}>50 months · Solo</span>
             <span style={{ color: "var(--fg-3)" }}>$109,700</span>
-            <span style={{ color: "var(--fg)" }}>61 years · Solo</span>
+            <span style={{ color: "var(--fg)" }}>46 years · Solo</span>
             <span style={{ color: "var(--fg-3)" }}>1 disqualification</span>
             <span style={{ color: "var(--fg)" }}>incalculable</span>
           </div>
         </div>
       </section>
 
-      <section style={{ borderBottom: "1px solid var(--hair)", padding: "112px 40px" }}>
+      <section
+        style={{ borderBottom: "1px solid var(--hair)", padding: "112px 40px" }}
+      >
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <h2
             style={{
@@ -293,11 +401,11 @@ export default function PricingPage() {
               lineHeight: 1.05,
             }}
           >
-            Verify your first filing now.
+            Run your first review now.
           </h2>
           <div style={{ display: "flex", gap: 12 }}>
             <Link href="/scan" className="v-btn v-btn--primary v-btn--lg">
-              Run a free scan
+              Run a free review
             </Link>
             <Link href="/" className="v-btn v-btn--secondary v-btn--lg">
               Back to overview
@@ -364,12 +472,20 @@ function Nav() {
           <VWordmark />
         </Link>
         <nav style={{ display: "flex", gap: 32 }}>
-          <Link href="/" style={navLink}>Platform</Link>
-          <Link href="/scan" style={navLink}>Run a scan</Link>
-          <Link href="/pricing" style={{ ...navLink, color: "var(--fg)" }}>Pricing</Link>
+          <Link href="/" style={navLink}>
+            Platform
+          </Link>
+          <Link href="/scan" style={navLink}>
+            Run a review
+          </Link>
+          <Link href="/pricing" style={{ ...navLink, color: "var(--fg)" }}>
+            Pricing
+          </Link>
         </nav>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Link href="/sign-in" style={navLink}>Sign in</Link>
+          <Link href="/sign-in" style={navLink}>
+            Sign in
+          </Link>
           <Link href="/sign-up" className="v-btn v-btn--primary v-btn--sm">
             Create account
           </Link>

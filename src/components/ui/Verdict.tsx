@@ -16,10 +16,19 @@ const CLASS: Record<V, string> = {
   unknown: "v-badge v-badge--neutral",
 };
 
+/**
+ * Verdict labels are deliberately hedged. Veritas surfaces candidates
+ * for attorney review; we never assert that something IS fabricated or
+ * IS wrong. Final call is always the filing attorney's.
+ *   risk    → "Not found in reporter"  (no matching opinion located)
+ *   warning → "Review recommended"     (mismatch / unsupported / weakened)
+ *   verified→ "Confirmed"              (located + supported)
+ *   unknown → "Pending"
+ */
 const LABEL: Record<V, string> = {
-  verified: "Verified",
-  warning: "Unsupported",
-  risk: "Fabricated",
+  verified: "Confirmed",
+  warning: "Review recommended",
+  risk: "Not found in reporter",
   unknown: "Pending",
 };
 

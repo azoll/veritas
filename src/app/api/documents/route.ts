@@ -53,6 +53,11 @@ export async function POST(req: Request) {
   }
 
   const buf = await file.arrayBuffer();
+  const { createHash } = await import("node:crypto");
+  const contentHash = createHash("sha256")
+    .update(Buffer.from(buf))
+    .digest("hex");
+
   const blob = await put(`firms/${scope.firmId}/${Date.now()}-${file.name}`, buf, {
     access: "public", // private-by-token would be ideal; using public for MVP
     addRandomSuffix: true,
@@ -83,6 +88,7 @@ export async function POST(req: Request) {
       rawText: parsed.text,
       status: "extracting",
       deepScan,
+      contentHash,
     })
     .returning();
 

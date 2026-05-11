@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { VerdictPill } from "@/components/ui/Verdict";
+import { EmailGate } from "./EmailGate";
 
 type Doc = {
   id: string;
@@ -35,6 +36,12 @@ type Verification = {
   sourceUrl: string | null;
 };
 
+function readLeadCookie(documentId: string): boolean {
+  if (typeof document === "undefined") return false;
+  const key = `v_lead_${documentId}=`;
+  return document.cookie.split("; ").some((c) => c.startsWith(key));
+}
+
 export function TrialResult({ documentId }: { documentId: string }) {
   const [data, setData] = useState<{
     document: Doc;
@@ -42,6 +49,11 @@ export function TrialResult({ documentId }: { documentId: string }) {
     verifications: Verification[];
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [unlocked, setUnlocked] = useState(false);
+
+  useEffect(() => {
+    setUnlocked(readLeadCookie(documentId));
+  }, [documentId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,6 +101,13 @@ export function TrialResult({ documentId }: { documentId: string }) {
   }
 
   const { document: doc, citations, verifications } = data;
+
+  // While the audit is still running, show the live progress; defer the
+  // email gate until the result actually exists to be shown.
+  const auditDone = doc.status === "ready" || doc.status === "failed";
+  if (auditDone && !unlocked) {
+    return <EmailGate documentId={doc.id} onUnlock={() => setUnlocked(true)} />;
+  }
   const verifsByCit = new Map<string, Verification[]>();
   for (const v of verifications) {
     const arr = verifsByCit.get(v.citationId) ?? [];

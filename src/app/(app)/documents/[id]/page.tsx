@@ -165,12 +165,12 @@ export default async function DocumentPage({
               </span>
             )}
             <Link
-              href={`/api/documents/${doc.id}/report`}
+              href={`/api/documents/${doc.id}/certificate`}
               target="_blank"
               className="v-btn v-btn--secondary v-btn--sm"
               style={{ marginLeft: "auto" }}
             >
-              Generate risk report
+              View Verification Certificate
             </Link>
           </div>
         </div>
@@ -186,12 +186,44 @@ export default async function DocumentPage({
         >
           <Stat label="Risk score" value={riskScore != null ? String(riskScore) : "—"} tone="ink" />
           <Stat label="Citations" value={String(doc.citationCount)} tone="ink" />
-          <Stat label="Fabricated" value={String(doc.riskCount)} tone="critical" />
-          <Stat label="Unsupported" value={String(doc.warningCount)} tone="amber" />
+          <Stat label="Not located" value={String(doc.riskCount)} tone="critical" />
+          <Stat label="Review recommended" value={String(doc.warningCount)} tone="amber" />
         </div>
       </div>
 
-      <div style={{ marginTop: 56 }}>
+      <div
+        style={{
+          marginTop: 32,
+          padding: "14px 18px",
+          border: "1px solid var(--hair)",
+          background: "var(--bg-raised)",
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 12,
+        }}
+      >
+        <div
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 11,
+            letterSpacing: "0.16em",
+            textTransform: "uppercase",
+            color: "var(--fg-3)",
+            paddingTop: 2,
+            flexShrink: 0,
+          }}
+        >
+          Reviewer of record
+        </div>
+        <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--fg-2)" }}>
+          Veritas surfaces candidates for attorney review. Findings are not
+          legal conclusions. The decision to rely on any authority — and
+          responsibility for every citation in a filing — remains with the
+          filing attorney.
+        </div>
+      </div>
+
+      <div style={{ marginTop: 40 }}>
         <h2
           style={{
             margin: "0 0 24px",

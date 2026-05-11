@@ -177,7 +177,7 @@ function Hero() {
               textTransform: "uppercase",
             }}
           >
-            Currently in private pilot with appellate &amp; litigation groups
+            Pilot cohort open · first 10 firms · hand-onboarded by the team
           </div>
         </div>
         <HeroPreview />

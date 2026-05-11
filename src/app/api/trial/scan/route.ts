@@ -85,6 +85,12 @@ export async function POST(req: Request) {
   }
 
   const buf = await file.arrayBuffer();
+
+  // SHA-256 hash of the original bytes. Binds the upload to its
+  // Verification Certificate — tampering breaks the hash.
+  const { createHash } = await import("node:crypto");
+  const contentHash = createHash("sha256").update(Buffer.from(buf)).digest("hex");
+
   const blob = await put(`trials/${sessionId}/${Date.now()}-${file.name}`, buf, {
     access: "public",
     addRandomSuffix: true,
@@ -117,6 +123,7 @@ export async function POST(req: Request) {
       deepScan: false,
       trialSessionId: sessionId,
       expiresAt: trialExpiry(),
+      contentHash,
     })
     .returning();
 

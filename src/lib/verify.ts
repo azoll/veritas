@@ -190,12 +190,15 @@ async function verifyOneCitation(args: {
       verdict: "risk",
       source: "courtlistener:search",
       detail:
-        "No matching opinion found in CourtListener. This citation may be hallucinated, mistyped, or unreported.",
+        "No matching opinion found in CourtListener for this reporter citation. The citation may be mistyped, unreported, or otherwise not present in the corpus we searched. Recommend manual verification before filing.",
       raw: { query } as never,
     });
     await db
       .update(schema.citations)
-      .set({ verdict: rolled, notes: "No matching opinion found." })
+      .set({
+        verdict: rolled,
+        notes: "No matching opinion located — manual verification recommended.",
+      })
       .where(eq(schema.citations.id, citationId));
     return rolled;
   }
@@ -217,8 +220,8 @@ async function verifyOneCitation(args: {
     source: `courtlistener:cluster/${hit.clusterId}`,
     sourceUrl: hit.absoluteUrl,
     detail: nameMismatch
-      ? `Found ${hit.caseName} at ${query}, but the brief styles it as ${cite.caseName}.`
-      : `Confirmed ${hit.caseName} at ${query}.`,
+      ? `Located ${hit.caseName} at ${query}; the brief styles it as "${cite.caseName}". Verify the case name aligns with the citation.`
+      : `Located ${hit.caseName} at ${query}.`,
     raw: { hit } as never,
   });
   if (nameMismatch) rolled = worst(rolled, "warning");
@@ -278,9 +281,9 @@ async function verifyOneCitation(args: {
       sourceUrl: hit.absoluteUrl,
       detail: qHit
         ? score >= 95
-          ? "Quoted language found in the opinion."
-          : "Quoted language partially matches — wording may have been altered."
-        : "Quoted language not found in the opinion.",
+          ? "Quoted language located in the cited opinion."
+          : "Partial match only — wording may have been altered, condensed, or paraphrased. Recommend comparing the brief's quotation against the source."
+        : "Quoted language was not located in the cited opinion. Recommend verifying the quotation against the source before filing.",
       raw: { quoted, score } as never,
     });
     rolled = worst(rolled, qVerdict);
@@ -310,7 +313,14 @@ async function verifyOneCitation(args: {
         sourceUrl: hit.absoluteUrl,
         model: result.model,
         promptHash: result.promptHash,
-        detail: `Proposition ${result.verdict}: ${result.reasoning}`,
+        detail:
+          result.verdict === "supports"
+            ? `Proposition appears supported. ${result.reasoning}`
+            : result.verdict === "overstates"
+              ? `Proposition may be overstated relative to the holding. ${result.reasoning}`
+              : result.verdict === "contradicts"
+                ? `Cited authority may run contrary to the asserted proposition. ${result.reasoning}`
+                : `Support for the asserted proposition was not located in the cited opinion. ${result.reasoning}`,
         raw: result as never,
       });
       rolled = worst(rolled, pVerdict);

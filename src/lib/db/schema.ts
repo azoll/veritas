@@ -119,6 +119,13 @@ export const documents = pgTable(
     /** When true, run proposition validation via AI Gateway in addition to
      *  the deterministic checks. Default: standard scan only. */
     deepScan: boolean("deep_scan").notNull().default(false),
+    /** SHA-256 of the original uploaded bytes. Bound into the Verification
+     *  Certificate so any post-filing tampering with the document is
+     *  detectable. */
+    contentHash: text("content_hash"),
+    /** Stable, unguessable token for the public Certificate page
+     *  (`/c/<token>`). Generated once on first certificate render. */
+    certificateToken: text("certificate_token").unique(),
     /** For anonymous trial uploads. Cookie value; null for authenticated
      *  uploads. Trial documents are anchored to the seeded anonymous firm. */
     trialSessionId: text("trial_session_id"),
@@ -247,8 +254,37 @@ export const auditEvents = pgTable(
   ],
 );
 
+/**
+ * Email captured from anonymous trial users before they're shown their
+ * scan result. Treated as marketing-funnel leads, not authenticated users.
+ * Includes the trial session + document so we can re-surface the same
+ * result for them on return visits or via email link.
+ */
+export const trialLeads = pgTable(
+  "trial_leads",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").notNull(),
+    name: text("name"),
+    firm: text("firm"),
+    trialSessionId: text("trial_session_id"),
+    documentId: uuid("document_id").references(() => documents.id, {
+      onDelete: "set null",
+    }),
+    source: text("source"),
+    /** Marketing preferences. */
+    optInUpdates: boolean("opt_in_updates").notNull().default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("trial_leads_email_idx").on(t.email),
+    index("trial_leads_session_idx").on(t.trialSessionId),
+  ],
+);
+
 export type Document = typeof documents.$inferSelect;
 export type Citation = typeof citations.$inferSelect;
 export type Quote = typeof quotes.$inferSelect;
 export type Verification = typeof verifications.$inferSelect;
 export type AuditEvent = typeof auditEvents.$inferSelect;
+export type TrialLead = typeof trialLeads.$inferSelect;
