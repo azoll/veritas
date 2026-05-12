@@ -61,7 +61,7 @@ const TIERS = [
       "Custom severity policy",
       "Annual commit available",
     ],
-    cta: { label: "Talk to us", href: "mailto:hello@veritas.law" },
+    cta: { label: "Talk to us", href: "mailto:andrew@veritaslaw.app" },
     accent: false,
   },
 ];
@@ -231,10 +231,10 @@ export default function PricingPage() {
             ENTERPRISE · Custom pricing for governance, compliance reporting,
             on-prem, and insurer integrations. Talk to us at{" "}
             <a
-              href="mailto:hello@veritas.law"
+              href="mailto:andrew@veritaslaw.app"
               style={{ color: "var(--fg-2)" }}
             >
-              hello@veritas.law
+              andrew@veritaslaw.app
             </a>
             .
           </div>
