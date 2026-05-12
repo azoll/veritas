@@ -65,7 +65,7 @@ function Nav() {
           <Seal size={22} />
           <VWordmark />
         </Link>
-        <nav style={{ display: "flex", gap: 32 }}>
+        <nav className="v-marketing-nav" style={{ display: "flex", gap: 32 }}>
           {items.map((i) => (
             <Link
               key={i.label}
@@ -81,9 +81,13 @@ function Nav() {
             </Link>
           ))}
         </nav>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div
+          className="v-marketing-actions"
+          style={{ display: "flex", alignItems: "center", gap: 12 }}
+        >
           <Link
             href="/sign-in"
+            className="v-marketing-signin"
             style={{
               color: "var(--fg-2)",
               fontSize: 13,
@@ -119,8 +123,10 @@ function Hero() {
           maxWidth: 1440,
           margin: "0 auto",
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 80,
+          // Auto-stacks to one column on screens below ~880px because the
+          // 420px min won't fit two side-by-side.
+          gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))",
+          gap: "clamp(40px, 6vw, 80px)",
           alignItems: "end",
         }}
       >
@@ -350,8 +356,8 @@ function Ticker() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 64,
+            gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+            gap: "clamp(40px, 6vw, 64px)",
             alignItems: "end",
           }}
         >
@@ -541,7 +547,7 @@ function Pain() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
             borderTop: "1px solid var(--hair)",
             borderLeft: "1px solid var(--hair)",
           }}
@@ -714,7 +720,7 @@ function Pillars() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
             gap: 0,
             borderTop: "1px solid var(--hair)",
           }}
@@ -1011,7 +1017,7 @@ function Footer() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1.4fr 1fr 1fr 1fr 1fr",
+            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
             gap: 48,
             paddingBottom: 48,
             borderBottom: "1px solid var(--hair)",

@@ -42,3 +42,12 @@ body { margin: 0; }
   0%   { transform: translateY(-100%); }
   100% { transform: translateY(4000%); }
 }
+
+/* Mobile: collapse the marketing header so logo + primary CTA stay
+   visible while the secondary nav and "Sign in" link drop out (the
+   same destinations are reachable from the footer). Keeps the
+   above-the-fold header readable on a 360px phone. */
+@media (max-width: 720px) {
+  .v-marketing-nav { display: none !important; }
+  .v-marketing-signin { display: none !important; }
+}
