@@ -12,7 +12,9 @@ import { generateObject } from "ai";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 
-const PROPOSITION_MODEL = "anthropic/claude-sonnet-4-6";
+// AI Gateway model id format is "provider/model" with dot-separated
+// version numbers (claude-sonnet-4.6, not claude-sonnet-4-6).
+const PROPOSITION_MODEL = "anthropic/claude-sonnet-4.6";
 
 const PropositionSchema = z.object({
   verdict: z.enum(["supports", "overstates", "unsupported", "contradicts"]),

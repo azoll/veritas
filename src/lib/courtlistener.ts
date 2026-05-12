@@ -72,6 +72,7 @@ export async function lookupCitation(
   // per-IP throttle hits us harder than a local dev box. Longer windows
   // (~30s total) get us across most bursts.
   const delays = [1000, 3000, 8000, 20000];
+  const RETRIABLE = new Set([429, 502, 503, 504]);
   for (let attempt = 0; attempt <= delays.length; attempt++) {
     let r: Response;
     try {
@@ -84,10 +85,14 @@ export async function lookupCitation(
         body,
       });
     } catch {
-      return { ok: false, reason: "error" };
+      if (attempt === delays.length) return { ok: false, reason: "error" };
+      await new Promise((res) => setTimeout(res, delays[attempt]));
+      continue;
     }
-    if (r.status === 429) {
-      if (attempt === delays.length) return { ok: false, reason: "rate_limited" };
+    if (RETRIABLE.has(r.status)) {
+      if (attempt === delays.length) {
+        return { ok: false, reason: r.status === 429 ? "rate_limited" : "error" };
+      }
       await new Promise((res) => setTimeout(res, delays[attempt]));
       continue;
     }
@@ -129,28 +134,36 @@ export type CLOpinion = {
  * Used for pincite/quote verification.
  */
 /**
- * Fetch with retry-on-429 backoff. CL rate-limits per-token bursts on
- * the cluster/opinion endpoints just like /citation-lookup/, so a single
- * transient 429 was silently killing the treatment + pincite branches.
- * Returns null only on real failure, never on a recoverable rate limit.
+ * Fetch with retry-on-transient backoff. CL rate-limits per-token
+ * bursts AND occasionally returns 5xx under load, so a single bad
+ * response was silently killing the treatment + pincite branches.
+ * Returns null only on real failure; recoverable codes get retried.
+ *
+ * Retriable: 429, 502, 503, 504, and network errors. Anything else
+ * (400, 404, 401, etc.) returns immediately — those are caller bugs
+ * or "not found" answers, not transients.
  */
 async function fetchWithRetry(
   url: string,
   init: RequestInit & { next?: { revalidate?: number } },
 ): Promise<Response | null> {
-  // CL throttles aggressively on Vercel's shared egress IPs even with a
-  // valid token, so the windows have to be longer than they'd need to be
-  // on a dedicated IP. ~30s of total backoff lets a transient burst clear.
+  // CL throttles aggressively on Vercel's shared egress IPs even with
+  // a valid token, so the windows have to be longer than they'd need
+  // to be on a dedicated IP. ~30s of total backoff lets a transient
+  // burst clear.
   const delays = [1000, 3000, 8000, 20000];
+  const RETRIABLE = new Set([429, 502, 503, 504]);
   for (let attempt = 0; attempt <= delays.length; attempt++) {
     let r: Response;
     try {
       r = await fetch(url, init);
     } catch {
-      return null;
+      if (attempt === delays.length) return null;
+      await new Promise((res) => setTimeout(res, delays[attempt]));
+      continue;
     }
-    if (r.status === 429) {
-      if (attempt === delays.length) return r; // give caller the 429 to handle
+    if (RETRIABLE.has(r.status)) {
+      if (attempt === delays.length) return r; // give caller the bad response
       await new Promise((res) => setTimeout(res, delays[attempt]));
       continue;
     }

@@ -95,21 +95,32 @@ export function extractCitationsRegex(text: string): ExtractedCitation[] {
 }
 
 /**
- * Extract direct quotations attributed to a citation. Heuristic: a quoted
- * passage immediately preceding (within ~250 chars) the citation marker.
+ * Extract direct quotations attributed to a citation. Heuristic: the
+ * LAST quoted passage preceding the citation marker, within ~600
+ * chars. Critically, the search window is clamped to start AFTER the
+ * end of the previous citation in the document — otherwise a quote
+ * attributed to citation N-1 gets falsely attached to citation N,
+ * which produces a bogus "quote not found in cited opinion" risk on
+ * the second citation.
  */
 export function extractQuotesNearCitations(
   text: string,
   cites: ExtractedCitation[],
 ): { citationIndex: number; quoted: string }[] {
   const out: { citationIndex: number; quoted: string }[] = [];
-  for (let i = 0; i < cites.length; i++) {
-    const c = cites[i];
-    const window = text.slice(Math.max(0, c.startOffset - 600), c.startOffset);
+  const sorted = [...cites]
+    .map((c, i) => ({ c, i }))
+    .sort((a, b) => a.c.startOffset - b.c.startOffset);
+
+  let prevEnd = 0;
+  for (const { c, i } of sorted) {
+    const windowStart = Math.max(prevEnd, c.startOffset - 600);
+    const window = text.slice(windowStart, c.startOffset);
     // Match the LAST quoted run before the citation
     const matches = [...window.matchAll(/[“"]([^"”]{8,400})[”"]/g)];
     const last = matches.at(-1);
     if (last) out.push({ citationIndex: i, quoted: last[1].trim() });
+    prevEnd = c.endOffset;
   }
   return out;
 }
