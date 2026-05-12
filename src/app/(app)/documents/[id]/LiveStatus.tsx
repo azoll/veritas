@@ -46,11 +46,17 @@ export function LiveStatus({ documentId, initialStatus }: Props) {
         if (next !== lastSeen.current) {
           lastSeen.current = next;
           setStatus(next);
-          // Pull fresh server-rendered citations/verifications/etc.
-          router.refresh();
         }
+        // Refresh on every tick while the pipeline is still running.
+        // Verifications stream in one-by-one during the "verifying"
+        // phase, so refreshing only on the status transition leaves
+        // the page blank for ~60s while CourtListener calls complete.
         if (!TERMINAL.has(next)) {
-          timer = setTimeout(tick, 1500);
+          router.refresh();
+          timer = setTimeout(tick, 2000);
+        } else {
+          // One final refresh to pull the terminal-state snapshot.
+          router.refresh();
         }
       } catch {
         // Transient errors are fine — back off and try again.
