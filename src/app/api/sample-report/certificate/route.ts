@@ -52,6 +52,7 @@ const citations: Cit[] = [
     id: "sample-halverson",
     documentId: "sample",
     firmId: "sample",
+    kind: "case",
     rawText:
       "Halverson v. Pacific Western Mutual, 547 F.4th 1182, 1191 (9th Cir. 2024)",
     normalized: "547 F.4th 1182, 1191",
@@ -73,6 +74,7 @@ const citations: Cit[] = [
     id: "sample-upjohn",
     documentId: "sample",
     firmId: "sample",
+    kind: "case",
     rawText: "Upjohn Co. v. United States, 449 U.S. 383, 392 (1981)",
     normalized: "449 U.S. 383, 392",
     caseName: "Upjohn Co. v. United States,",
@@ -93,6 +95,7 @@ const citations: Cit[] = [
     id: "sample-daubert",
     documentId: "sample",
     firmId: "sample",
+    kind: "case",
     rawText:
       "Daubert v. Merrell Dow Pharmaceuticals, Inc., 509 U.S. 579, 596 (1993)",
     normalized: "509 U.S. 579, 596",
@@ -114,6 +117,7 @@ const citations: Cit[] = [
     id: "sample-hickman",
     documentId: "sample",
     firmId: "sample",
+    kind: "case",
     rawText: "Hickman v. Taylor, 329 U.S. 495, 507 (1947)",
     normalized: "329 U.S. 495, 507",
     caseName: "Hickman v. Taylor,",

@@ -27,6 +27,7 @@ import {
   lookupCitation,
   type CLOpinion,
 } from "@/lib/courtlistener";
+import { lookupCFR, lookupFedRule, lookupUSC } from "@/lib/lii";
 import { logAudit } from "@/lib/audit";
 import { aiAvailable, checkProposition } from "@/lib/ai";
 
@@ -101,8 +102,16 @@ export async function verifyDocument(documentId: string, firmId: string) {
       .values({
         documentId,
         firmId,
+        kind: c.kind,
         rawText: c.rawText,
-        normalized: `${c.volume} ${c.reporter} ${c.page}${c.pinpointPage ? ", " + c.pinpointPage : ""}`,
+        normalized:
+          c.kind === "case"
+            ? `${c.volume} ${c.reporter} ${c.page}${c.pinpointPage ? ", " + c.pinpointPage : ""}`
+            : c.kind === "statute"
+              ? `${c.volume ? c.volume + " " : ""}${c.reporter} § ${c.page}`.trim()
+              : c.kind === "rule"
+                ? `${c.reporter} ${c.page}`
+                : `${c.volume} ${c.reporter} ${c.page}`,
         caseName: c.caseName ?? null,
         reporter: c.reporter,
         volume: c.volume,
@@ -168,6 +177,29 @@ export async function verifyDocument(documentId: string, firmId: string) {
 }
 
 async function verifyOneCitation(args: {
+  citationId: string;
+  documentId: string;
+  cite: ExtractedCitation;
+  quoted?: string;
+  deepScan: boolean;
+}): Promise<Verdict> {
+  // Dispatch by authority kind. Each verifier writes its own rows;
+  // the dispatcher returns the rolled-up worst verdict.
+  switch (args.cite.kind) {
+    case "statute":
+      return verifyStatute(args);
+    case "rule":
+      return verifyRule(args);
+    case "westlaw":
+    case "lexis":
+      return verifyOnlineOnly(args);
+    case "case":
+    default:
+      return verifyCase(args);
+  }
+}
+
+async function verifyCase(args: {
   citationId: string;
   documentId: string;
   cite: ExtractedCitation;
@@ -493,6 +525,320 @@ async function verifyOneCitation(args: {
     .set({ updatedAt: sql`now()` })
     .where(eq(schema.documents.id, documentId));
 
+  return rolled;
+}
+
+/* =================================================================
+   STATUTE / RULE / ONLINE-ONLY VERIFIERS
+   ================================================================= */
+
+async function verifyStatute(args: {
+  citationId: string;
+  documentId: string;
+  cite: ExtractedCitation;
+}): Promise<Verdict> {
+  const { citationId, documentId, cite } = args;
+  let rolled: Verdict = "verified";
+  const query =
+    cite.volume && /U\.?S\.?C|C\.?F\.?R/.test(cite.reporter)
+      ? `${cite.volume} ${cite.reporter} § ${cite.page}`
+      : `${cite.reporter} § ${cite.page}`;
+
+  // Federal: U.S.C. / C.F.R. via Cornell LII. State statutes: we
+  // record existence as unknown (no free national state-statute API
+  // exists) but still run proposition support via AI so the lawyer
+  // gets some signal.
+  const isUSC = /U\.?S\.?C/.test(cite.reporter);
+  const isCFR = /C\.?F\.?R/.test(cite.reporter);
+  const isFederal = isUSC || isCFR;
+
+  if (isFederal) {
+    const result = isUSC
+      ? await lookupUSC(cite.volume, cite.page)
+      : await lookupCFR(cite.volume, cite.page);
+    if (!result.ok) {
+      const isMissing = result.reason === "not_found";
+      rolled = worst(rolled, isMissing ? "risk" : "unknown");
+      await db.insert(schema.verifications).values({
+        citationId,
+        documentId,
+        kind: "existence",
+        verdict: isMissing ? "risk" : "unknown",
+        source: "cornell-lii",
+        detail: isMissing
+          ? `No statute is published at ${query} in Cornell LII's corpus of the U.S. Code. This is the typical signal for a hallucinated or mistyped statutory cite; verify against the official source before filing.`
+          : `Statute existence check was inconclusive (LII fetch failed). Recommend manual verification.`,
+        raw: { query, reason: result.reason } as never,
+      });
+      await skipDownstreamForAuthority(citationId, documentId, "statute", rolled);
+      return finalize(citationId, documentId, rolled);
+    }
+
+    await db.insert(schema.verifications).values({
+      citationId,
+      documentId,
+      kind: "existence",
+      verdict: "verified",
+      source: "cornell-lii",
+      sourceUrl: result.sourceUrl,
+      detail: `Located ${result.title || query} on Cornell LII.`,
+      raw: { url: result.sourceUrl } as never,
+    });
+
+    // Pincite for statutes: if the brief attached a quote, see whether
+    // it appears in the LII excerpt.
+    await runStatutePincite(citationId, documentId, args.cite, result.excerpt, result.sourceUrl);
+
+    // Proposition check against statute text.
+    await runStatuteProposition(citationId, documentId, args.cite, result.excerpt, result.sourceUrl, query);
+  } else {
+    // State statute — surface as inconclusive existence so the lawyer
+    // knows we couldn't independently verify it.
+    await db.insert(schema.verifications).values({
+      citationId,
+      documentId,
+      kind: "existence",
+      verdict: "unknown",
+      source: "veritas:state-statute",
+      detail: `State statute cited: ${query}. We do not currently have a free national state-statute corpus to verify against; please confirm the citation manually.`,
+      raw: { query } as never,
+    });
+    rolled = worst(rolled, "unknown");
+    await skipDownstreamForAuthority(citationId, documentId, "statute", rolled);
+  }
+
+  return finalize(citationId, documentId, rolled);
+}
+
+async function verifyRule(args: {
+  citationId: string;
+  documentId: string;
+  cite: ExtractedCitation;
+}): Promise<Verdict> {
+  const { citationId, documentId, cite } = args;
+  let rolled: Verdict = "verified";
+  // cite.reporter is "Fed. R. Civ. P." etc.; pull the rule set out of it.
+  const setMatch = /Fed\.?\s?R\.?\s?(Civ|Crim|Evid|App|Bankr)/i.exec(cite.reporter);
+  const ruleSet = setMatch ? setMatch[1] : "";
+  const query = `${cite.reporter} ${cite.page}`;
+  const result = ruleSet
+    ? await lookupFedRule(ruleSet, cite.page)
+    : { ok: false as const, reason: "error" as const };
+
+  if (!result.ok) {
+    const isMissing = result.reason === "not_found";
+    rolled = worst(rolled, isMissing ? "risk" : "unknown");
+    await db.insert(schema.verifications).values({
+      citationId,
+      documentId,
+      kind: "existence",
+      verdict: isMissing ? "risk" : "unknown",
+      source: "cornell-lii",
+      detail: isMissing
+        ? `No such rule found on Cornell LII at ${query}. Verify the rule number before filing.`
+        : `Rule existence check was inconclusive (LII fetch failed). Recommend manual verification.`,
+      raw: { query, reason: result.reason } as never,
+    });
+    await skipDownstreamForAuthority(citationId, documentId, "rule", rolled);
+    return finalize(citationId, documentId, rolled);
+  }
+
+  await db.insert(schema.verifications).values({
+    citationId,
+    documentId,
+    kind: "existence",
+    verdict: "verified",
+    source: "cornell-lii",
+    sourceUrl: result.sourceUrl,
+    detail: `Located ${result.title || query} on Cornell LII.`,
+    raw: { url: result.sourceUrl } as never,
+  });
+
+  await runStatutePincite(citationId, documentId, args.cite, result.excerpt, result.sourceUrl);
+  await runStatuteProposition(citationId, documentId, args.cite, result.excerpt, result.sourceUrl, query);
+
+  return finalize(citationId, documentId, rolled);
+}
+
+async function verifyOnlineOnly(args: {
+  citationId: string;
+  documentId: string;
+  cite: ExtractedCitation;
+}): Promise<Verdict> {
+  const { citationId, documentId, cite } = args;
+  const isWestlaw = cite.kind === "westlaw";
+  const query = `${cite.volume} ${cite.reporter} ${cite.page}`;
+  await db.insert(schema.verifications).values({
+    citationId,
+    documentId,
+    kind: "existence",
+    verdict: "unknown",
+    source: isWestlaw ? "veritas:westlaw-only" : "veritas:lexis-only",
+    detail: `${isWestlaw ? "Westlaw" : "Lexis"}-only citation (${query}). We do not have a license to the ${isWestlaw ? "Westlaw" : "Lexis"} corpus, so we cannot independently verify the underlying opinion text. If the case was later published in a bound reporter, prefer that citation; otherwise verify manually before filing.`,
+    raw: { query } as never,
+  });
+  // No pincite or proposition — we don't have source text.
+  await db
+    .update(schema.citations)
+    .set({ verdict: "unknown" })
+    .where(eq(schema.citations.id, citationId));
+  return "unknown";
+}
+
+/* ─── helpers shared by statute / rule paths ──────────────────── */
+
+async function runStatutePincite(
+  citationId: string,
+  documentId: string,
+  cite: ExtractedCitation,
+  sourceText: string,
+  sourceUrl: string,
+): Promise<void> {
+  // We don't have quote-extraction wired into verifyOneCitation's args
+  // for non-case kinds yet, so write the explicit N/A row to keep the
+  // three-checks-per-citation guarantee intact.
+  void cite;
+  void sourceText;
+  await db.insert(schema.verifications).values({
+    citationId,
+    documentId,
+    kind: "pincite",
+    verdict: "verified",
+    source: "veritas:extract",
+    sourceUrl,
+    detail:
+      "No direct quotation attributed to this authority in the brief, or quotation matching is not yet supported for statutes/rules. Nothing to verify against the source text.",
+    raw: { applicable: false } as never,
+  });
+}
+
+async function runStatuteProposition(
+  citationId: string,
+  documentId: string,
+  cite: ExtractedCitation,
+  sourceText: string,
+  sourceUrl: string,
+  query: string,
+): Promise<void> {
+  if (!cite.contextSnippet) {
+    await db.insert(schema.verifications).values({
+      citationId,
+      documentId,
+      kind: "proposition",
+      verdict: "unknown",
+      source: "veritas:extract",
+      sourceUrl,
+      detail:
+        "Proposition-support check was inconclusive — no surrounding argument text was captured around this citation.",
+      raw: { reason: "no_context" } as never,
+    });
+    return;
+  }
+  if (!aiAvailable()) {
+    await db.insert(schema.verifications).values({
+      citationId,
+      documentId,
+      kind: "proposition",
+      verdict: "unknown",
+      source: "veritas:ai",
+      sourceUrl,
+      detail:
+        "Proposition-support check was unavailable — the verification model is offline. Recommend manual review.",
+      raw: { reason: "ai_unavailable" } as never,
+    });
+    return;
+  }
+  const result = await checkProposition({
+    caseName: query,
+    citation: query,
+    opinionText: sourceText,
+    proposition: cite.contextSnippet,
+  });
+  if (!result) {
+    await db.insert(schema.verifications).values({
+      citationId,
+      documentId,
+      kind: "proposition",
+      verdict: "unknown",
+      source: "veritas:ai",
+      sourceUrl,
+      detail:
+        "Proposition-support check was inconclusive — the verification model returned an error. Recommend manual review.",
+      raw: { reason: "ai_error" } as never,
+    });
+    return;
+  }
+  const pVerdict: Verdict =
+    result.verdict === "supports"
+      ? "verified"
+      : result.verdict === "contradicts"
+        ? "risk"
+        : "warning";
+  await db.insert(schema.verifications).values({
+    citationId,
+    documentId,
+    kind: "proposition",
+    verdict: pVerdict,
+    source: "cornell-lii",
+    sourceUrl,
+    model: result.model,
+    promptHash: result.promptHash,
+    detail:
+      result.verdict === "supports"
+        ? `Proposition appears supported. ${result.reasoning}`
+        : result.verdict === "overstates"
+          ? `Proposition may be overstated relative to the source text. ${result.reasoning}`
+          : result.verdict === "contradicts"
+            ? `Source authority may run contrary to the asserted proposition. ${result.reasoning}`
+            : `Support for the asserted proposition was not located in the source text. ${result.reasoning}`,
+    raw: result as never,
+  });
+}
+
+async function skipDownstreamForAuthority(
+  citationId: string,
+  documentId: string,
+  authorityKind: "statute" | "rule",
+  rolled: Verdict,
+): Promise<void> {
+  void authorityKind;
+  // When existence fails, write the explicit not-run rows so the
+  // three-checks-per-citation guarantee still holds.
+  await db.insert(schema.verifications).values({
+    citationId,
+    documentId,
+    kind: "pincite",
+    verdict: "verified",
+    source: "veritas:extract",
+    detail:
+      "Skipped — the underlying authority could not be located, so there is no source text to compare against.",
+    raw: { applicable: false } as never,
+  });
+  await db.insert(schema.verifications).values({
+    citationId,
+    documentId,
+    kind: "proposition",
+    verdict: rolled === "risk" ? "risk" : "unknown",
+    source: "veritas:extract",
+    detail:
+      "Skipped — the underlying authority could not be located, so we cannot evaluate proposition support.",
+    raw: { reason: "no_source" } as never,
+  });
+}
+
+async function finalize(
+  citationId: string,
+  documentId: string,
+  rolled: Verdict,
+): Promise<Verdict> {
+  await db
+    .update(schema.citations)
+    .set({ verdict: rolled })
+    .where(eq(schema.citations.id, citationId));
+  await db
+    .update(schema.documents)
+    .set({ updatedAt: sql`now()` })
+    .where(eq(schema.documents.id, documentId));
   return rolled;
 }
 

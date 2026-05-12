@@ -152,6 +152,13 @@ export const citations = pgTable(
     firmId: uuid("firm_id")
       .notNull()
       .references(() => firms.id, { onDelete: "cascade" }),
+    /**
+     * Authority kind. Lets us route different citation types through
+     * different verifiers (CourtListener for cases, Cornell LII for
+     * statutes/rules, detection-only for Westlaw/Lexis cites).
+     * Defaults to "case" to keep historical rows working.
+     */
+    kind: text("kind").notNull().default("case"),
     /** Raw citation as it appeared in the document, e.g. "Smith v. Jones, 123 F.3d 456 (9th Cir. 2001)". */
     rawText: text("raw_text").notNull(),
     /** Best-effort normalized form. */
