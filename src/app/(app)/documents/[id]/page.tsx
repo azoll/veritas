@@ -5,6 +5,7 @@ import { getScope } from "@/lib/auth/scope";
 import { db, schema } from "@/lib/db";
 import { VerdictPill } from "@/components/ui/Verdict";
 import { CitationCard } from "./CitationCard";
+import { DeleteButton } from "./DeleteButton";
 import { EmptyScope } from "@/components/EmptyScope";
 
 export const dynamic = "force-dynamic";
@@ -164,14 +165,23 @@ export default async function DocumentPage({
                 {doc.error ? ` · ${doc.error}` : ""}
               </span>
             )}
-            <Link
-              href={`/api/documents/${doc.id}/certificate`}
-              target="_blank"
-              className="v-btn v-btn--secondary v-btn--sm"
-              style={{ marginLeft: "auto" }}
+            <div
+              style={{
+                marginLeft: "auto",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+              }}
             >
-              View Verification Certificate
-            </Link>
+              <Link
+                href={`/api/documents/${doc.id}/certificate`}
+                target="_blank"
+                className="v-btn v-btn--secondary v-btn--sm"
+              >
+                View Verification Certificate
+              </Link>
+              <DeleteButton documentId={doc.id} />
+            </div>
           </div>
         </div>
 
