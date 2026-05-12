@@ -57,3 +57,21 @@ body { margin: 0; }
 @media (max-width: 880px) {
   .v-ticker-block { text-align: center; }
 }
+
+/* Sanctions grid: max 3 cards wide, centered. Collapses to 2 then 1
+   on narrower viewports. */
+.v-sanctions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 1080px;
+  margin: 0 auto;
+  width: 100%;
+  border-top: 1px solid var(--hair);
+  border-left: 1px solid var(--hair);
+}
+@media (max-width: 880px) {
+  .v-sanctions-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .v-sanctions-grid { grid-template-columns: 1fr; }
+}

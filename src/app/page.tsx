@@ -548,14 +548,7 @@ function Pain() {
           have not changed: a lawyer is responsible for every citation in a
           filing they sign, regardless of who or what produced it.
         </p>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            borderTop: "1px solid var(--hair)",
-            borderLeft: "1px solid var(--hair)",
-          }}
-        >
+        <div className="v-sanctions-grid">
           {cases.map((c, i) => (
             <article
               key={i}
