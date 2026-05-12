@@ -19,7 +19,10 @@
  * URL for federal statutory and rules text.
  */
 
-const UA = "Veritas/0.1 (verification platform — andrew@veritaslaw.app)";
+// Pure-ASCII UA — Vercel's fetch rejects non-ASCII header values
+// (the em-dash that used to live here was silently failing every
+// statute and rule lookup).
+const UA = "Veritas/0.1 (verification platform - andrew@veritaslaw.app)";
 
 export type LIIResult =
   | { ok: true; sourceUrl: string; excerpt: string; title: string }
@@ -32,11 +35,15 @@ async function fetchExcerpt(url: string): Promise<LIIResult> {
       headers: { "User-Agent": UA, Accept: "text/html" },
       next: { revalidate: 86400 * 7 }, // statutes change rarely
     });
-  } catch {
+  } catch (e) {
+    console.warn(`[lii] fetch threw for ${url}:`, (e as Error).message);
     return { ok: false, reason: "error" };
   }
   if (r.status === 404) return { ok: false, reason: "not_found" };
-  if (!r.ok) return { ok: false, reason: "error" };
+  if (!r.ok) {
+    console.warn(`[lii] non-OK ${r.status} for ${url}`);
+    return { ok: false, reason: "error" };
+  }
   const html = await r.text();
   // Strip everything to text, capture a leading excerpt sized for AI
   // proposition analysis. LII pages are mostly clean prose inside

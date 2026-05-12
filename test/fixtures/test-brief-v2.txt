@@ -1,0 +1,73 @@
+              UNITED STATES DISTRICT COURT
+              SOUTHERN DISTRICT OF NEW YORK
+
+
+   PLAINTIFF JANE DOE,                  Civil No. 24-cv-9999
+                       Plaintiff,
+                                        PLAINTIFF'S MEMORANDUM IN
+            v.                          SUPPORT OF MOTION TO COMPEL
+                                        DISCOVERY AND FOR SANCTIONS
+   DEFENDANT ACME CORP.,
+                       Defendant.
+
+
+
+                   I.  INTRODUCTION
+
+Plaintiff brings this motion under 28 U.S.C. § 1331 to compel
+production of documents wrongfully withheld by Defendant. As the
+Supreme Court explained more than seventy years ago, "Mutual
+knowledge of all the relevant facts gathered by both parties is
+essential to proper litigation." Hickman v. Taylor, 329 U.S. 495,
+507 (1947). Discovery, in other words, exists to surface the truth.
+
+                   II.  SCOPE OF DISCOVERY
+
+The scope of discovery is governed by Fed. R. Civ. P. 26(b)(1),
+which permits parties to obtain discovery "regarding any
+nonprivileged matter that is relevant to any party's claim or
+defense and proportional to the needs of the case." Federal courts
+have rejected blanket objections to relevant discovery requests
+where, as here, the producing party has made no specific showing of
+burden. Hickman, 329 U.S. at 510. A recent and binding decision held
+that "blanket relevance objections, lodged without substantive
+particularization of the burden alleged, are insufficient as a
+matter of law to defeat a properly-served Rule 34 request."
+Halverson v. Pacific Western Mutual, 547 F.4th 1182, 1191 (9th Cir.
+2024). Halverson is directly on point: Defendant's responses to
+Requests 14-28 contain only boilerplate objections that fail any
+test of particularity.
+
+                   III.  SANCTIONS FOR REFUSAL
+
+The Court has authority to sanction discovery abuse under Fed. R.
+Civ. P. 37(b)(2)(A). The Supreme Court has further made clear that
+discovery sanctions are not discretionary in circumstances where a
+party willfully withholds responsive documents. In Upjohn, the Court
+emphasized that "discovery sanctions must be applied severely upon
+any showing of willful evasion, with no requirement that the moving
+party demonstrate prejudice." Upjohn Co. v. United States, 449 U.S.
+383, 392 (1981). Defendant's conduct here satisfies the Upjohn
+standard and warrants sanctions accordingly. See also Smith v.
+Acme, 2024 WL 1234567, at *4 (S.D.N.Y. Mar. 5, 2024) (imposing
+$50,000 in fees for similar evasive responses).
+
+                   IV.  PROPORTIONALITY
+
+Defendant's argument that production would be disproportionate
+ignores the Supreme Court's clear instruction that discovery
+requests must be presumed reasonable absent an affirmative showing
+of bad faith by the responding party. See Daubert v. Merrell Dow
+Pharmaceuticals, Inc., 509 U.S. 579, 596 (1993). Plaintiff is also
+entitled to attorney's fees under 42 U.S.C. § 1988(b). Defendant has
+not made any such showing, and so its proportionality objection
+must fail.
+
+                   V.  CONCLUSION
+
+For the foregoing reasons, Plaintiff respectfully requests that the
+Court grant this Motion to Compel and direct Defendant to produce
+all responsive documents within fourteen (14) days of this order.
+
+                                  Respectfully submitted,
+                                  /s/ Counsel for Plaintiff
