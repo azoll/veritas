@@ -5,6 +5,7 @@ import { db, schema } from "@/lib/db";
 import { UploadDropzone } from "@/components/upload/UploadDropzone";
 import { VerdictPill } from "@/components/ui/Verdict";
 import { EmptyScope } from "@/components/EmptyScope";
+import { DashboardLivePoll } from "./DashboardLivePoll";
 
 export const dynamic = "force-dynamic";
 
@@ -31,8 +32,13 @@ export default async function DashboardPage() {
     .orderBy(desc(schema.documents.createdAt))
     .limit(50);
 
+  const anyPending = docs.some(
+    (d) => d.status !== "ready" && d.status !== "failed",
+  );
+
   return (
     <div style={{ maxWidth: 1440, margin: "0 auto", padding: "64px 40px", width: "100%" }}>
+      <DashboardLivePoll pending={anyPending} />
       <div style={{ marginBottom: 56 }}>
         <div className="v-eyebrow">Filings · Verification Queue</div>
         <h1

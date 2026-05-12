@@ -6,6 +6,7 @@ import { db, schema } from "@/lib/db";
 import { VerdictPill } from "@/components/ui/Verdict";
 import { CitationCard } from "./CitationCard";
 import { DeleteButton } from "./DeleteButton";
+import { LiveStatus } from "./LiveStatus";
 import { EmptyScope } from "@/components/EmptyScope";
 
 export const dynamic = "force-dynamic";
@@ -200,6 +201,8 @@ export default async function DocumentPage({
           <Stat label="Review recommended" value={String(doc.warningCount)} tone="amber" />
         </div>
       </div>
+
+      <LiveStatus documentId={doc.id} initialStatus={doc.status} />
 
       <div
         style={{
