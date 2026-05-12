@@ -46,7 +46,7 @@ function Nav() {
           maxWidth: 1440,
           margin: "0 auto",
           height: 64,
-          padding: "0 40px",
+          padding: "0 clamp(16px, 4vw, 40px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -110,7 +110,7 @@ function Hero() {
     <section
       style={{
         borderBottom: "1px solid var(--hair)",
-        padding: "120px 40px 96px",
+        padding: "clamp(72px, 14vw, 120px) clamp(16px, 4vw, 40px) clamp(64px, 12vw, 96px)",
         position: "relative",
       }}
     >
@@ -132,7 +132,7 @@ function Hero() {
             style={{
               margin: 0,
               fontFamily: "var(--font-serif)",
-              fontSize: 96,
+              fontSize: "clamp(2.5rem, 9vw, 6rem)",
               fontWeight: 400,
               lineHeight: 0.96,
               letterSpacing: "-0.02em",
@@ -344,7 +344,7 @@ function Ticker() {
         style={{
           maxWidth: 1440,
           margin: "0 auto",
-          padding: "96px 40px",
+          padding: "clamp(64px, 12vw, 96px) clamp(16px, 4vw, 40px)",
         }}
       >
         <div
@@ -386,7 +386,7 @@ function Ticker() {
               style={{
                 margin: "0 0 24px",
                 fontFamily: "var(--font-serif)",
-                fontSize: 36,
+                fontSize: "clamp(1.5rem, 3.5vw, 2.25rem)",
                 fontWeight: 400,
                 lineHeight: 1.15,
                 letterSpacing: "-0.01em",
@@ -507,7 +507,7 @@ function Pain() {
   ];
   return (
     <section style={{ borderBottom: "1px solid var(--hair)" }}>
-      <div style={{ maxWidth: 1440, margin: "0 auto", padding: "112px 40px 96px" }}>
+      <div style={{ maxWidth: 1440, margin: "0 auto", padding: "clamp(80px, 13vw, 112px) clamp(16px, 4vw, 40px) clamp(64px, 12vw, 96px)" }}>
         <div className="v-eyebrow" style={{ marginBottom: 24 }}>
           The record so far
         </div>
@@ -515,7 +515,7 @@ function Pain() {
           style={{
             margin: "0 0 24px",
             fontFamily: "var(--font-serif)",
-            fontSize: 56,
+            fontSize: "clamp(2rem, 5.5vw, 3.5rem)",
             fontWeight: 400,
             lineHeight: 1.05,
             letterSpacing: "-0.02em",
@@ -573,7 +573,7 @@ function Pain() {
               <div
                 style={{
                   fontFamily: "var(--font-serif)",
-                  fontSize: 26,
+                  fontSize: "clamp(1.25rem, 2.5vw, 1.625rem)",
                   fontWeight: 400,
                   lineHeight: 1.15,
                   letterSpacing: "-0.01em",
@@ -681,7 +681,7 @@ function Pillars() {
   ];
   return (
     <section style={{ borderBottom: "1px solid var(--hair)" }}>
-      <div style={{ maxWidth: 1440, margin: "0 auto", padding: "112px 40px" }}>
+      <div style={{ maxWidth: 1440, margin: "0 auto", padding: "clamp(80px, 13vw, 112px) clamp(16px, 4vw, 40px)" }}>
         <div className="v-eyebrow" style={{ marginBottom: 24 }}>
           What Veritas does
         </div>
@@ -689,7 +689,7 @@ function Pillars() {
           style={{
             margin: "0 0 24px",
             fontFamily: "var(--font-serif)",
-            fontSize: 56,
+            fontSize: "clamp(2rem, 5.5vw, 3.5rem)",
             fontWeight: 400,
             lineHeight: 1.05,
             letterSpacing: "-0.02em",
@@ -760,7 +760,7 @@ function Pillars() {
                 style={{
                   margin: "0 0 16px",
                   fontFamily: "var(--font-sans)",
-                  fontSize: 32,
+                  fontSize: "clamp(1.5rem, 3.5vw, 2rem)",
                   fontWeight: 500,
                   letterSpacing: "-0.01em",
                 }}
@@ -834,7 +834,7 @@ function Quote() {
         style={{
           maxWidth: 1100,
           margin: "0 auto",
-          padding: "112px 40px",
+          padding: "clamp(80px, 13vw, 112px) clamp(16px, 4vw, 40px)",
         }}
       >
         <div className="v-eyebrow" style={{ marginBottom: 40 }}>
@@ -913,7 +913,7 @@ function Compliance() {
     <section
       style={{
         borderBottom: "1px solid var(--hair)",
-        padding: "48px 40px",
+        padding: "clamp(40px, 8vw, 48px) clamp(16px, 4vw, 40px)",
       }}
     >
       <div
@@ -949,7 +949,7 @@ function CTA() {
     <section
       style={{
         borderBottom: "1px solid var(--hair)",
-        padding: "112px 40px",
+        padding: "clamp(80px, 13vw, 112px) clamp(16px, 4vw, 40px)",
       }}
     >
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
@@ -957,7 +957,7 @@ function CTA() {
           style={{
             margin: "0 0 32px",
             fontFamily: "var(--font-serif)",
-            fontSize: 72,
+            fontSize: "clamp(2.25rem, 7vw, 4.5rem)",
             fontWeight: 400,
             lineHeight: 1,
             letterSpacing: "-0.02em",
@@ -1006,7 +1006,7 @@ function Footer() {
     { h: "Company", items: ["About", "Careers", "Contact"] },
   ];
   return (
-    <footer style={{ padding: "64px 40px 32px" }}>
+    <footer style={{ padding: "clamp(48px, 10vw, 64px) clamp(16px, 4vw, 40px) 32px" }}>
       <div style={{ maxWidth: 1440, margin: "0 auto" }}>
         <div
           style={{

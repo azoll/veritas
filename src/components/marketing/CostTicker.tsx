@@ -50,18 +50,28 @@ export function CostTicker() {
 
   const fmt = "$" + Math.round(value).toLocaleString("en-US");
 
+  // Reserve width for the widest format the ticker will reach during
+  // the animation (HIGH value, fully formatted, comma included). This
+  // stops the layout from reflowing on every frame as digits — and the
+  // comma — appear, which produced visible jitter on screens narrower
+  // than the natural width of the largest value.
+  const widthReserve = "$" + Math.round(HIGH).toLocaleString("en-US");
+
   return (
     <span
       ref={ref}
       style={{
         fontFamily: "var(--font-serif)",
-        fontSize: 120,
+        // Scales fluidly: ~52px on a 360px phone, 120px on desktop.
+        fontSize: "clamp(2.75rem, 11vw, 7.5rem)",
         fontWeight: 400,
         lineHeight: 0.95,
         letterSpacing: "-0.03em",
         fontVariantNumeric: "tabular-nums",
         color: "var(--fg)",
-        display: "block",
+        display: "inline-block",
+        minWidth: `${widthReserve.length}ch`,
+        whiteSpace: "nowrap",
       }}
     >
       {fmt}

@@ -15,8 +15,8 @@
   --courtroom:          #F4F2EE;  /* primary light bg, warm */
   --courtroom-2:        #ECE9E2;  /* raised surface on light */
   --courtroom-3:        #E2DED4;  /* secondary surface on light */
-  --iron:               #5B6470;  /* secondary text */
-  --iron-2:             #8A929B;  /* tertiary text */
+  --iron:               #8E96A1;  /* secondary text — bumped from #5B6470 for WCAG AA contrast on obsidian (~5.7:1) */
+  --iron-2:             #A8B0BA;  /* tertiary text — bumped from #8A929B for WCAG AA contrast (~7.5:1) */
   --navy:               #132238;  /* trust anchor */
   --navy-2:             #1E3252;
 
