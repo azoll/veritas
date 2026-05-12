@@ -51,3 +51,9 @@ body { margin: 0; }
   .v-marketing-nav { display: none !important; }
   .v-marketing-signin { display: none !important; }
 }
+
+/* Center the cost-ticker block on stacked mobile layouts so the huge
+   number doesn't sit left-anchored in an empty full-width column. */
+@media (max-width: 880px) {
+  .v-ticker-block { text-align: center; }
+}

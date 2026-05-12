@@ -24,12 +24,16 @@ export default function MarketingHome() {
    ================================================================= */
 
 function Nav() {
+  // Anchor-style nav: the marketing page is single-scroll, so the
+  // top-bar links jump to the relevant in-page section. Pricing and
+  // Sample Report are real routes. This avoids dead links to pages
+  // we haven't built yet, while still giving the header the same
+  // institutional feel.
   const items = [
-    { label: "Platform", href: "/" },
-    { label: "How it works", href: "/how-it-works" },
-    { label: "Security", href: "/security" },
+    { label: "How it works", href: "#how-it-works" },
+    { label: "Security", href: "#security" },
     { label: "Pricing", href: "/pricing" },
-    { label: "Resources", href: "/resources" },
+    { label: "Sample report", href: "/sample-report" },
   ];
   return (
     <header
@@ -162,13 +166,13 @@ function Hero() {
           </p>
           <div style={{ display: "flex", gap: 12 }}>
             <Link href="/scan" className="v-btn v-btn--primary v-btn--lg">
-              Upload a filing
+              Try it free
             </Link>
             <Link
-              href="/how-it-works"
+              href="/sample-report"
               className="v-btn v-btn--secondary v-btn--lg"
             >
-              How it works
+              See a sample
             </Link>
           </div>
           <div
@@ -361,7 +365,7 @@ function Ticker() {
             alignItems: "end",
           }}
         >
-          <div>
+          <div className="v-ticker-block">
             <div className="v-eyebrow" style={{ marginBottom: 32 }}>
               Aggregate cost to the bar
             </div>
@@ -650,43 +654,47 @@ function Pain() {
    ================================================================= */
 
 function Pillars() {
+  // Three pillars, three things every report guarantees. Copy is
+  // calibrated to what the product actually delivers today; aspirational
+  // features (adversarial review, on-prem, per-matter encryption) have
+  // been removed until they ship.
   const pillars = [
     {
       n: "01",
       title: "Verify",
       body:
-        "Every cited authority is matched against primary reporters, statutes, and court rules. We confirm the case exists, that the holding is what counsel says it is, and that the proposition is actually supported.",
+        "Every cited authority is resolved against the official reporter. We confirm the case exists at that volume and page, that any quoted language actually appears in the opinion, and that the cited case supports the proposition it's offered for.",
       points: [
         "Reporter lookup",
-        "Holding-to-proposition matching",
-        "Negative treatment surfacing",
+        "Quotation match against opinion text",
+        "Proposition-support analysis",
       ],
     },
     {
       n: "02",
       title: "Audit",
       body:
-        "Every action, by a human, by a model, by a tool, is timestamped, hashed, and bound to the filing. The audit trail is exportable as a signed PDF that travels with the brief.",
+        "Every check produces a verification row — model, prompt hash, source URL, timestamp — written to an immutable audit log. The full result is bound to the original file via a SHA-256 content hash so any later tampering breaks the chain.",
       points: [
-        "SHA-256 evidence chain",
-        "Per-paragraph provenance",
-        "Court-ready export",
+        "SHA-256 content binding",
+        "Per-citation verification trail",
+        "Verification Certificate",
       ],
     },
     {
       n: "03",
       title: "Defend",
       body:
-        "Stress-test the brief adversarially before opposing counsel does. Surface unsupported propositions, weakened precedent, and authority you may have omitted.",
+        "Hedged verdicts you can hand to a partner, a client, or a malpractice carrier without overclaiming. \"Not located in reporter\" instead of \"fabricated\" — the language is precise so the report is itself defensible.",
       points: [
-        "Adversarial review",
-        "Weakness scoring",
-        "Defensibility report",
+        "Risk score across the filing",
+        "Hedged, attorney-safe verdicts",
+        "Reviewer-of-record disclaimer",
       ],
     },
   ];
   return (
-    <section style={{ borderBottom: "1px solid var(--hair)" }}>
+    <section id="how-it-works" style={{ borderBottom: "1px solid var(--hair)", scrollMarginTop: 80 }}>
       <div style={{ maxWidth: 1440, margin: "0 auto", padding: "clamp(80px, 13vw, 112px) clamp(16px, 4vw, 40px)" }}>
         <div className="v-eyebrow" style={{ marginBottom: 24 }}>
           What Veritas does
@@ -908,18 +916,22 @@ function Quote() {
    ================================================================= */
 
 function Compliance() {
+  // Honest security claims only. SOC 2, on-prem, EU residency, and
+  // per-matter encryption are not in scope today; we'll add badges
+  // as the underlying controls actually ship.
   const items = [
-    "SOC 2 Type II (in audit)",
-    "Privileged Cloud",
-    "Per-Matter Encryption",
-    "EU Data Residency",
-    "On-Prem Available",
+    "Multi-tenant by firm",
+    "TLS in transit · AES-256 at rest",
+    "Immutable audit log",
+    "SHA-256 content binding",
   ];
   return (
     <section
+      id="security"
       style={{
         borderBottom: "1px solid var(--hair)",
         padding: "clamp(40px, 8vw, 48px) clamp(16px, 4vw, 40px)",
+        scrollMarginTop: 80,
       }}
     >
       <div
@@ -986,7 +998,7 @@ function CTA() {
         </p>
         <div style={{ display: "flex", gap: 12 }}>
           <Link href="/scan" className="v-btn v-btn--primary v-btn--lg">
-            Upload a filing
+            Try it free
           </Link>
           <Link
             href="/sample-report"
@@ -1005,11 +1017,29 @@ function CTA() {
    ================================================================= */
 
 function Footer() {
-  const cols = [
-    { h: "Platform", items: ["Verification", "Audit", "Adversarial Review", "API"] },
-    { h: "For", items: ["Law Firms", "In-House", "Government"] },
-    { h: "Resources", items: ["Methodology", "Security", "Status"] },
-    { h: "Company", items: ["About", "Careers", "Contact"] },
+  // Honest footer: only destinations that actually exist. Better than
+  // a wider layout of dead links. We can expand as we ship pages.
+  const cols: { h: string; items: { label: string; href: string }[] }[] = [
+    {
+      h: "Product",
+      items: [
+        { label: "Try it free", href: "/scan" },
+        { label: "Sample report", href: "/sample-report" },
+        { label: "Pricing", href: "/pricing" },
+      ],
+    },
+    {
+      h: "Platform",
+      items: [
+        { label: "How it works", href: "#how-it-works" },
+        { label: "Security", href: "#security" },
+        { label: "Sign in", href: "/sign-in" },
+      ],
+    },
+    {
+      h: "Company",
+      items: [{ label: "Contact", href: "mailto:andrew@veritaslaw.app" }],
+    },
   ];
   return (
     <footer style={{ padding: "clamp(48px, 10vw, 64px) clamp(16px, 4vw, 40px) 32px" }}>
@@ -1062,16 +1092,16 @@ function Footer() {
                 }}
               >
                 {c.items.map((i) => (
-                  <li key={i}>
+                  <li key={i.label}>
                     <a
-                      href="#"
+                      href={i.href}
                       style={{
                         fontSize: 13,
                         color: "var(--fg-2)",
                         textDecoration: "none",
                       }}
                     >
-                      {i}
+                      {i.label}
                     </a>
                   </li>
                 ))}
