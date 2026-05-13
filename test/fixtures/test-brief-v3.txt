@@ -1,0 +1,174 @@
+              UNITED STATES DISTRICT COURT
+              SOUTHERN DISTRICT OF NEW YORK
+
+   ELAINE RUTHERFORD,                  Civil No. 25-cv-7421
+                       Plaintiff,
+                                        PLAINTIFF'S CONSOLIDATED
+            v.                          MEMORANDUM IN OPPOSITION
+                                        TO DEFENDANT'S MOTION FOR
+   DELPHI CORPORATE SERVICES, INC.,    SUMMARY JUDGMENT AND
+                       Defendant.       IN SUPPORT OF CROSS-MOTION
+                                        TO COMPEL DISCOVERY
+
+
+
+                   I.  PRELIMINARY STATEMENT
+
+Plaintiff Elaine Rutherford brings this consolidated opposition under
+28 U.S.C. § 1331, asserting claims under 42 U.S.C. § 2000e-5 and 42
+U.S.C. § 1981. Defendant Delphi Corporate Services' motion for
+summary judgment must be denied because (i) genuine disputes of
+material fact remain in the record under Fed. R. Civ. P. 56(a), and
+(ii) Defendant has affirmatively withheld discovery that, when
+produced, will establish the disputed material facts. Plaintiff
+respectfully cross-moves under Fed. R. Civ. P. 37 for an order
+compelling production of the documents identified in Section IV.
+
+
+                   II.  STANDARD OF REVIEW
+
+Summary judgment is appropriate only where "there is no genuine
+dispute as to any material fact and the movant is entitled to
+judgment as a matter of law." Fed. R. Civ. P. 56(a). The Supreme
+Court has made clear that "summary judgment should be granted only
+when the moving party can demonstrate beyond a reasonable doubt that
+no factual disputes exist." Anderson v. Liberty Lobby, Inc., 477
+U.S. 242, 255 (1986). The moving party bears the initial burden of
+identifying portions of the record demonstrating the absence of a
+genuine issue. Celotex Corp. v. Catrett, 477 U.S. 317, 323 (1986).
+Where, as here, the non-movant has produced direct evidence of
+discriminatory intent, the Matsushita inference does not apply.
+Matsushita Elec. Indus. Co. v. Zenith Radio Corp., 475 U.S. 574,
+587 (1986).
+
+
+                   III.  STATEMENT OF JURISDICTION
+
+This Court has subject-matter jurisdiction under 28 U.S.C. § 1331
+and 28 U.S.C. § 1332. Personal jurisdiction over Defendant is proper
+under the standard articulated in International Shoe Co. v.
+Washington, 326 U.S. 310, 316 (1945), and refined in World-Wide
+Volkswagen Corp. v. Woodson, 444 U.S. 286, 297 (1980). Defendant
+maintains its principal place of business in this District and has
+not contested jurisdiction. Pennoyer v. Neff, 95 U.S. 174, 720
+(1877).
+
+
+                   IV.  STATEMENT OF FACTS
+
+Plaintiff was employed by Defendant from March 2019 to August 2024
+in the position of Senior Operations Analyst. The discovery record
+establishes that (i) Plaintiff received satisfactory or higher
+performance reviews in each of her five years of employment, (ii)
+Plaintiff was terminated within ten days of disclosing her pregnancy
+to her supervisor, and (iii) similarly-situated male employees were
+not terminated during the same departmental restructuring.
+
+The framework for analyzing a Title VII pretext claim is well-
+settled. The plaintiff must establish a prima facie case;
+the burden then shifts to the defendant to articulate a legitimate
+nondiscriminatory reason; the plaintiff then bears the burden of
+demonstrating that the reason offered is pretextual. McDonnell
+Douglas Corp. v. Green, 411 U.S. 792, 802 (1973). At the summary
+judgment stage, the court must "draw all reasonable inferences in
+favor of the nonmoving party," Anderson, 477 U.S. at 255, and may
+not weigh credibility, Henderson v. National Marine Underwriters,
+562 F.4th 891, 905 (4th Cir. 2024).
+
+The pleading standard articulated in Bell Atlantic Corp. v.
+Twombly, 550 U.S. 544, 570 (2007), and refined in Ashcroft v.
+Iqbal, 556 U.S. 662, 678 (2009), is satisfied where the complaint
+contains "factual content that allows the court to draw the
+reasonable inference that the defendant is liable for the misconduct
+alleged." Iqbal, 556 U.S. at 678. Plaintiff has cleared that bar
+several times over.
+
+
+                   V.  ARGUMENT
+
+A.  Defendant Has Withheld Discoverable Information.
+
+The scope of permissible discovery is broad. As the Supreme Court
+explained more than seventy years ago, "Mutual knowledge of all the
+relevant facts gathered by both parties is essential to proper
+litigation." Hickman v. Taylor, 329 U.S. 495, 507 (1947). The text
+of Fed. R. Civ. P. 26(b)(1) confirms that scope, providing that
+"parties may obtain discovery regarding any nonprivileged matter
+that is relevant to any party's claim or defense and proportional to
+the needs of the case." Fed. R. Civ. P. 26(b)(1). The discovery
+rules embody the same principle of equal access to information that
+the Supreme Court articulated in Brown v. Board of Education when
+it held that "in the field of public education, the doctrine of
+'separate but equal' has no place." Brown v. Board of Education,
+347 U.S. 483, 495 (1954). Where, as here, a defendant has withheld
+documents central to the pretext analysis, the discovery rules
+require production.
+
+Defendant's reliance on the attorney-client privilege for the
+withheld personnel-decision communications is misplaced. Under
+Upjohn Co. v. United States, 449 U.S. 383, 392 (1981), the
+privilege protects only communications made for the purpose of
+securing legal advice. Documents reflecting routine business
+decisions made by HR personnel without attorney involvement are not
+privileged, even where they reference legal considerations.
+Martinelli v. Pacific Coast Logistics, LLC, 538 U.S. 412, 419
+(2023). The privilege does not extend to underlying facts.
+
+B.  Direct Evidence of Discriminatory Intent Defeats Summary Judgment.
+
+The record contains direct evidence — including a contemporaneous
+email from Plaintiff's supervisor stating that Plaintiff's
+"timing is unfortunate given the upcoming reorganization" — sent
+within hours of Plaintiff's pregnancy disclosure. Direct evidence of
+discriminatory animus removes the McDonnell Douglas framework from
+operation and shifts the analytical question to whether a reasonable
+jury could find the protected characteristic was a motivating factor.
+See 42 U.S.C. § 2000e-2(m).
+
+Defendant's argument that the expert testimony of Plaintiff's
+statistician should be excluded under Fed. R. Civ. P. 702 ignores
+the Supreme Court's clear instruction that statistical evidence in
+employment discrimination cases satisfies admissibility where the
+methodology is "generally accepted in the relevant scientific
+community." Daubert v. Merrell Dow Pharmaceuticals, Inc., 509 U.S.
+579, 596 (1993). The Daubert framework explicitly contemplates
+statistical analyses of employment data and supports admission.
+
+The constitutional dimension of Plaintiff's § 1981 claim is also
+substantial. As Justice Marshall observed, race-based employment
+classifications carry a presumption of unconstitutionality. See
+U.S. Const. amend. XIV, § 1. Plaintiff also notes the relevance of
+the Equal Protection clause to the broader analytical framework here.
+
+C.  Article III Standing Is Beyond Dispute.
+
+Plaintiff has suffered concrete injury (loss of employment, loss of
+benefits, emotional distress), causally connected to Defendant's
+conduct, redressable by the requested relief. Lujan v. Defenders of
+Wildlife, 504 U.S. 555, 560-61 (1992). Federal common law on
+related state-law questions is governed by Erie R.R. v. Tompkins,
+304 U.S. 64, 78 (1938).
+
+
+                   VI.  PROCEDURAL HISTORY
+
+Plaintiff filed her complaint on April 14, 2025. The complaint was
+sustained against Defendant's Rule 12(b)(6) motion to dismiss in a
+written opinion dated September 8, 2025. See Fed. R. Civ. P.
+12(b)(6). The Court's order denying that motion is consistent with
+the Twombly/Iqbal pleading standard outlined supra. The pleading-
+sufficiency analysis was further explained in the Court's
+August 2025 procedural order, citing Bell Atlantic Corp. v.
+Twombly, 550 U.S. 554, 570 (2007).
+
+
+                   VII.  CONCLUSION
+
+For the foregoing reasons, Plaintiff respectfully requests that the
+Court (1) deny Defendant's motion for summary judgment in its
+entirety, (2) grant Plaintiff's cross-motion to compel production
+of the documents identified in Section IV, and (3) award such
+further relief as the Court deems just and proper.
+
+                                  Respectfully submitted,
+                                  /s/ Counsel for Plaintiff

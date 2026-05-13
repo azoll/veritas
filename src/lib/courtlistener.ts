@@ -18,6 +18,28 @@ function headers() {
   return h;
 }
 
+/**
+ * Global per-request throttle. CourtListener's per-IP/per-token
+ * burst limit kicks in around 60 req/min — a 13-cite brief makes
+ * ~40 CL requests (lookup + cluster + opinion per cite), so without
+ * a spacer the back half of the verification batch gets throttled.
+ * A 600ms spacer is enough to stay under ~100 req/min sustained
+ * while adding ~25s of total wait to a 40-request batch — well
+ * inside the 300s function timeout.
+ *
+ * Implementation: a single module-level promise chain everyone
+ * awaits before firing their fetch.
+ */
+let throttleChain: Promise<void> = Promise.resolve();
+const CL_REQUEST_SPACING_MS = 600;
+async function clThrottle(): Promise<void> {
+  const myTurn = throttleChain.then(
+    () => new Promise<void>((res) => setTimeout(res, CL_REQUEST_SPACING_MS)),
+  );
+  throttleChain = myTurn;
+  return myTurn;
+}
+
 export type CLOpinionSearchHit = {
   id: number;
   caseName: string;
@@ -71,11 +93,17 @@ export async function lookupCitation(
   // serverless egress shares IPs with thousands of other apps, so CL's
   // per-IP throttle hits us harder than a local dev box. Longer windows
   // (~30s total) get us across most bursts.
-  const delays = [1000, 3000, 8000, 20000];
+  // Longer windows than fetchWithRetry uses below because
+  // citation-lookup is the heaviest CL endpoint (parses the cite
+  // server-side) and is the first thing every verification does, so
+  // it sees the worst burst pressure. ~120s of total backoff covers
+  // sustained per-minute throttle windows.
+  const delays = [2000, 6000, 15000, 30000, 60000];
   const RETRIABLE = new Set([429, 502, 503, 504]);
   for (let attempt = 0; attempt <= delays.length; attempt++) {
     let r: Response;
     try {
+      await clThrottle();
       r = await fetch(`${BASE}/citation-lookup/`, {
         method: "POST",
         headers: {
@@ -148,14 +176,14 @@ async function fetchWithRetry(
   init: RequestInit & { next?: { revalidate?: number } },
 ): Promise<Response | null> {
   // CL throttles aggressively on Vercel's shared egress IPs even with
-  // a valid token, so the windows have to be longer than they'd need
-  // to be on a dedicated IP. ~30s of total backoff lets a transient
-  // burst clear.
-  const delays = [1000, 3000, 8000, 20000];
+  // a valid token. ~120s of total backoff lets a sustained per-minute
+  // throttle window clear before we give up.
+  const delays = [2000, 6000, 15000, 30000, 60000];
   const RETRIABLE = new Set([429, 502, 503, 504]);
   for (let attempt = 0; attempt <= delays.length; attempt++) {
     let r: Response;
     try {
+      await clThrottle();
       r = await fetch(url, init);
     } catch {
       if (attempt === delays.length) return null;

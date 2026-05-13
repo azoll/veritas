@@ -354,16 +354,17 @@ export function extractCitationsRegex(text: string): ExtractedCitation[] {
     const start = m.index ?? 0;
     const end = start + m[0].length;
     const ruleSet = `Fed. R. ${m[1]}. P.`;
-    const key = `rule:${ruleSet}:${m[2]}`;
+    const rule = m[2].replace(/[.,;:]+$/, "");
+    const key = `rule:${ruleSet}:${rule}`;
     if (seen.has(key)) continue;
     seen.add(key);
     claim(start, end);
     out.push({
       kind: "rule",
-      rawText: m[0].trim(),
+      rawText: m[0].replace(/\s+/g, " ").trim(),
       reporter: ruleSet,
       volume: "",
-      page: m[2], // rule number, e.g. "26(b)(1)"
+      page: rule, // rule number, e.g. "26(b)(1)"
       startOffset: start,
       endOffset: end,
       contextSnippet: snippet(text, start, end),
@@ -375,7 +376,13 @@ export function extractCitationsRegex(text: string): ExtractedCitation[] {
     const start = m.index ?? 0;
     const end = start + m[0].length;
     const reporter = m[2].replace(/\s+/g, "").replace(/\.+$/, "");
-    const key = `stat:${m[1]}:${reporter}:${m[3]}`;
+    // Section often captures a trailing sentence period because of the
+    // `[\w\-.]*` in the section regex: "§ 1981." → "1981.". Strip that
+    // trailing period so the LII URL builder doesn't produce a 404 on
+    // /uscode/text/42/1981.
+    const sectionRaw = m[3];
+    const section = sectionRaw.replace(/[.,;:]+$/, "");
+    const key = `stat:${m[1]}:${reporter}:${section}`;
     if (seen.has(key)) continue;
     seen.add(key);
     claim(start, end);
@@ -384,7 +391,7 @@ export function extractCitationsRegex(text: string): ExtractedCitation[] {
       rawText: m[0].trim(),
       reporter, // e.g. "U.S.C." or "C.F.R."
       volume: m[1], // title number
-      page: m[3], // section number, e.g. "1983(a)"
+      page: section, // section number, e.g. "1983(a)"
       startOffset: start,
       endOffset: end,
       contextSnippet: snippet(text, start, end),
@@ -397,7 +404,8 @@ export function extractCitationsRegex(text: string): ExtractedCitation[] {
     const start = m.index ?? 0;
     const end = start + m[0].length;
     const code = m[1].replace(/\s+/g, " ").trim();
-    const key = `state-stat:${code}:${m[2]}`;
+    const section = m[2].replace(/[.,;:]+$/, "");
+    const key = `state-stat:${code}:${section}`;
     if (seen.has(key)) continue;
     seen.add(key);
     claim(start, end);
@@ -406,7 +414,7 @@ export function extractCitationsRegex(text: string): ExtractedCitation[] {
       rawText: m[0].trim(),
       reporter: code,
       volume: "",
-      page: m[2],
+      page: section,
       startOffset: start,
       endOffset: end,
       contextSnippet: snippet(text, start, end),
