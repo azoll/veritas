@@ -144,20 +144,30 @@ export async function POST(req: Request) {
     payload: { filename: file.name, sessionId },
   });
 
-  // Run verification in the background. waitUntil keeps the function
-  // instance alive past the response so the per-citation CourtListener
-  // and LLM calls actually complete. Without this, Vercel terminates
-  // the runtime as soon as the response is sent and verification stalls
-  // mid-loop (the "fire-and-forget" anti-pattern in serverless).
+  // Initialize the verification job (extract citations + insert
+  // rows + set status="verifying") inside waitUntil so the upload
+  // response returns fast, then fire-and-forget the first
+  // verify-batch invocation. The batch worker self-chains until
+  // the document is fully verified — no single function instance
+  // has to hold the whole pipeline open.
+  const origin = (() => {
+    const url = new URL(req.url);
+    return `${url.protocol}//${url.host}`;
+  })();
   waitUntil(
-    import("@/lib/verify").then(({ verifyDocument }) =>
-      verifyDocument(doc.id, firm.id).catch(async (e) => {
+    (async () => {
+      try {
+        const { verifyDocumentInit } = await import("@/lib/verify");
+        await verifyDocumentInit(doc.id, firm.id);
+        const { triggerVerifyBatch } = await import("@/lib/job-trigger");
+        triggerVerifyBatch(origin, doc.id);
+      } catch (e) {
         await db
           .update(schema.documents)
           .set({ status: "failed", error: (e as Error).message })
           .where(eq(schema.documents.id, doc.id));
-      }),
-    ),
+      }
+    })(),
   );
 
   const res = Response.json({ id: doc.id, trial: true });

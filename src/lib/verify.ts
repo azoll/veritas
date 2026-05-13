@@ -74,7 +74,26 @@ function quoteAppears(
   return { hit: false, score: 0 };
 }
 
-export async function verifyDocument(documentId: string, firmId: string) {
+/**
+ * Number of citations processed per verify-batch invocation. Chosen so
+ * that 4 concurrent workers × ~3 stages/cite × ~3s/stage stays well
+ * inside the 300s function timeout with headroom for CL retries.
+ * Batches of 8 mean a 30-citation brief takes ~4 chained invocations.
+ */
+export const VERIFY_BATCH_SIZE = 8;
+
+/**
+ * Stage 1 of the verification chain: extract citations from raw text,
+ * insert them into the DB with a stable sort index, set the doc to
+ * "verifying" status and reset the cursor. Does NOT run any
+ * verification work itself. Caller is expected to trigger the first
+ * /api/jobs/verify-batch invocation after this returns.
+ *
+ * Idempotent on re-call only if no citations exist yet for the doc.
+ * (We don't currently re-init mid-flight; the watchdog resumes from
+ * the cursor instead.)
+ */
+export async function verifyDocumentInit(documentId: string, firmId: string) {
   const [doc] = await db
     .select()
     .from(schema.documents)
@@ -82,8 +101,6 @@ export async function verifyDocument(documentId: string, firmId: string) {
   if (!doc) throw new Error("document not found");
   if (doc.firmId !== firmId) throw new Error("forbidden");
   if (!doc.rawText) throw new Error("document has no parsed text");
-
-  const deepScan = doc.deepScan;
 
   await db
     .update(schema.documents)
@@ -95,73 +112,121 @@ export async function verifyDocument(documentId: string, firmId: string) {
   const quoteByIdx = new Map<number, string>();
   for (const q of quotes) quoteByIdx.set(q.citationIndex, q.quoted);
 
-  const citationIds: string[] = [];
   for (let i = 0; i < cites.length; i++) {
     const c = cites[i];
-    const [row] = await db
-      .insert(schema.citations)
-      .values({
-        documentId,
-        firmId,
-        kind: c.kind,
-        rawText: c.rawText,
-        normalized:
-          c.kind === "case"
-            ? `${c.volume} ${c.reporter} ${c.page}${c.pinpointPage ? ", " + c.pinpointPage : ""}`
-            : c.kind === "statute"
-              ? `${c.volume ? c.volume + " " : ""}${c.reporter} § ${c.page}`.trim()
-              : c.kind === "rule"
-                ? `${c.reporter} ${c.page}`
-                : `${c.volume} ${c.reporter} ${c.page}`,
-        caseName: c.caseName ?? null,
-        reporter: c.reporter,
-        volume: c.volume,
-        page: c.page,
-        pinpointPage: c.pinpointPage ?? null,
-        court: c.court ?? null,
-        year: c.year ?? null,
-        startOffset: c.startOffset,
-        endOffset: c.endOffset,
-        contextSnippet: c.contextSnippet,
-      })
-      .returning({ id: schema.citations.id });
-    citationIds.push(row.id);
+    const quotedForCite = quoteByIdx.get(i);
+    await db.insert(schema.citations).values({
+      documentId,
+      firmId,
+      kind: c.kind,
+      sortIndex: i,
+      rawText: c.rawText,
+      normalized:
+        c.kind === "case"
+          ? `${c.volume} ${c.reporter} ${c.page}${c.pinpointPage ? ", " + c.pinpointPage : ""}`
+          : c.kind === "statute"
+            ? `${c.volume ? c.volume + " " : ""}${c.reporter} § ${c.page}`.trim()
+            : c.kind === "rule"
+              ? `${c.reporter} ${c.page}`
+              : `${c.volume} ${c.reporter} ${c.page}`,
+      caseName: c.caseName ?? null,
+      reporter: c.reporter,
+      volume: c.volume,
+      page: c.page,
+      pinpointPage: c.pinpointPage ?? null,
+      court: c.court ?? null,
+      year: c.year ?? null,
+      startOffset: c.startOffset,
+      endOffset: c.endOffset,
+      contextSnippet: c.contextSnippet,
+      // Cache the attributed quote in notes so we don't need to re-run
+      // extractQuotesNearCitations on every batch invocation.
+      notes: quotedForCite ? `__quoted__:${quotedForCite}` : null,
+    });
   }
 
   await db
     .update(schema.documents)
-    .set({ status: "verifying", citationCount: cites.length })
+    .set({
+      status: "verifying",
+      citationCount: cites.length,
+      nextCitationIndex: 0,
+      lastBatchAt: new Date(),
+    })
     .where(eq(schema.documents.id, documentId));
+
+  return { citationCount: cites.length };
+}
+
+/**
+ * Stage 2 of the verification chain: process the next batch of
+ * citations starting at doc.nextCitationIndex. Returns { done, next }
+ * so the caller knows whether to self-chain another invocation.
+ *
+ * Concurrency: 4 workers within the batch overlap on
+ * verifyOneCitation. CL throttle still serializes raw CL requests.
+ * AI Gateway calls pipeline freely.
+ */
+export async function verifyDocumentBatch(
+  documentId: string,
+  firmId: string,
+): Promise<{ done: boolean; processed: number; nextIndex: number }> {
+  const [doc] = await db
+    .select()
+    .from(schema.documents)
+    .where(eq(schema.documents.id, documentId));
+  if (!doc) throw new Error("document not found");
+  if (doc.firmId !== firmId) throw new Error("forbidden");
+
+  const startIdx = doc.nextCitationIndex;
+  const endIdx = startIdx + VERIFY_BATCH_SIZE;
+
+  const batch = await db
+    .select()
+    .from(schema.citations)
+    .where(eq(schema.citations.documentId, documentId))
+    .orderBy(schema.citations.sortIndex);
+
+  const slice = batch.slice(startIdx, endIdx);
+  if (slice.length === 0) {
+    // Nothing to do — finalize the doc.
+    await finalizeDocument(documentId, firmId);
+    return { done: true, processed: 0, nextIndex: startIdx };
+  }
 
   let verified = 0;
   let warnings = 0;
   let risks = 0;
 
-  // Verify citations in parallel with a bounded concurrency pool.
-  // Strict-sequential is O(N) wall time and hits the 300s function
-  // ceiling on 25+ citation briefs. The CL throttle (600ms spacer in
-  // clThrottle) is the only thing that actually needs to be
-  // serialized — running N citations through verifyOneCitation
-  // concurrently means each citation's stages (existence → cluster
-  // → opinion → AI) overlap with other citations' stages, and only
-  // the raw CL requests have to wait their turn. AI Gateway calls
-  // also pipeline freely.
-  //
-  // Pool size of 4 keeps DB writes from dogpiling and stays well
-  // inside Neon's connection limits while still giving a ~3-4x
-  // wall-time speedup on real briefs.
   const POOL_SIZE = 4;
   let cursor = 0;
   async function worker() {
     while (true) {
       const i = cursor++;
-      if (i >= cites.length) return;
+      if (i >= slice.length) return;
+      const row = slice[i];
+      const quoted = row.notes?.startsWith("__quoted__:")
+        ? row.notes.slice("__quoted__:".length)
+        : undefined;
       const rolled = await verifyOneCitation({
-        citationId: citationIds[i],
+        citationId: row.id,
         documentId,
-        cite: cites[i],
-        quoted: quoteByIdx.get(i),
-        deepScan,
+        cite: {
+          kind: (row.kind as ExtractedCitation["kind"]) || "case",
+          rawText: row.rawText,
+          caseName: row.caseName ?? undefined,
+          reporter: row.reporter ?? "",
+          volume: row.volume ?? "",
+          page: row.page ?? "",
+          pinpointPage: row.pinpointPage ?? undefined,
+          court: row.court ?? undefined,
+          year: row.year ?? undefined,
+          startOffset: row.startOffset ?? 0,
+          endOffset: row.endOffset ?? 0,
+          contextSnippet: row.contextSnippet ?? "",
+        },
+        quoted,
+        deepScan: doc.deepScan,
       });
       if (rolled === "verified") verified++;
       else if (rolled === "warning") warnings++;
@@ -169,33 +234,77 @@ export async function verifyDocument(documentId: string, firmId: string) {
     }
   }
   await Promise.all(
-    Array.from({ length: Math.min(POOL_SIZE, cites.length) }, () => worker()),
+    Array.from({ length: Math.min(POOL_SIZE, slice.length) }, () => worker()),
   );
 
-  const total = cites.length || 1;
-  const score = Math.round(((verified + 0.5 * warnings) / total) * 100);
-
+  // Update doc counters and advance the cursor.
   await db
     .update(schema.documents)
     .set({
-      status: "ready",
-      verifiedCount: verified,
-      warningCount: warnings,
-      riskCount: risks,
-      confidenceScore: score,
+      verifiedCount: (doc.verifiedCount ?? 0) + verified,
+      warningCount: (doc.warningCount ?? 0) + warnings,
+      riskCount: (doc.riskCount ?? 0) + risks,
+      nextCitationIndex: startIdx + slice.length,
+      lastBatchAt: new Date(),
       updatedAt: new Date(),
     })
     .where(eq(schema.documents.id, documentId));
 
+  const totalCitations = batch.length;
+  const done = startIdx + slice.length >= totalCitations;
+  if (done) {
+    await finalizeDocument(documentId, firmId);
+  }
+  return { done, processed: slice.length, nextIndex: startIdx + slice.length };
+}
+
+async function finalizeDocument(documentId: string, firmId: string) {
+  const [doc] = await db
+    .select()
+    .from(schema.documents)
+    .where(eq(schema.documents.id, documentId));
+  if (!doc) return;
+  const total = doc.citationCount || 1;
+  const score = Math.round(
+    ((doc.verifiedCount + 0.5 * doc.warningCount) / total) * 100,
+  );
+  await db
+    .update(schema.documents)
+    .set({
+      status: "ready",
+      confidenceScore: score,
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.documents.id, documentId));
   await logAudit({
     firmId,
     action: "document.verified",
     targetKind: "document",
     targetId: documentId,
-    payload: { citations: cites.length, verified, warnings, risks, score, deepScan },
+    payload: {
+      citations: doc.citationCount,
+      verified: doc.verifiedCount,
+      warnings: doc.warningCount,
+      risks: doc.riskCount,
+      score,
+      deepScan: doc.deepScan,
+    },
   });
+}
 
-  return { citations: cites.length, verified, warnings, risks, score };
+/**
+ * Legacy single-shot verification entry point. Kept for tests and
+ * any internal caller that wants synchronous behavior; production
+ * flow uses verifyDocumentInit + chained verifyDocumentBatch calls.
+ */
+export async function verifyDocument(documentId: string, firmId: string) {
+  const init = await verifyDocumentInit(documentId, firmId);
+  let done = false;
+  while (!done) {
+    const r = await verifyDocumentBatch(documentId, firmId);
+    done = r.done;
+  }
+  return { citationCount: init.citationCount };
 }
 
 async function verifyOneCitation(args: {

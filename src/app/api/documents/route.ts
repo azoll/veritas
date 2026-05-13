@@ -104,18 +104,29 @@ export async function POST(req: Request) {
     payload: { filename: file.name, sizeBytes: buf.byteLength },
   });
 
-  // Verification runs in the background past the response via waitUntil.
-  // Without this, Vercel terminates the function as soon as we respond
-  // and the per-citation CourtListener / LLM calls never complete.
+  // Init the verification job synchronously inside waitUntil
+  // (extracts citations, inserts rows, status="verifying") and then
+  // fire-and-forget the first verify-batch invocation. The batch
+  // worker self-chains across multiple function invocations so no
+  // single one needs to fit in 300s.
+  const origin = (() => {
+    const url = new URL(req.url);
+    return `${url.protocol}//${url.host}`;
+  })();
   waitUntil(
-    import("@/lib/verify").then(({ verifyDocument }) =>
-      verifyDocument(doc.id, scope.firmId).catch(async (e) => {
+    (async () => {
+      try {
+        const { verifyDocumentInit } = await import("@/lib/verify");
+        await verifyDocumentInit(doc.id, scope.firmId);
+        const { triggerVerifyBatch } = await import("@/lib/job-trigger");
+        triggerVerifyBatch(origin, doc.id);
+      } catch (e) {
         await db
           .update(schema.documents)
           .set({ status: "failed", error: (e as Error).message })
           .where(eq(schema.documents.id, doc.id));
-      }),
-    ),
+      }
+    })(),
   );
 
   return Response.json({ id: doc.id });

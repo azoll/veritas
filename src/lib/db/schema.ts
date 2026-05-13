@@ -132,6 +132,20 @@ export const documents = pgTable(
     /** Trial documents auto-expire 24h after upload unless claimed by sign-up. */
     expiresAt: timestamp("expires_at"),
     error: text("error"),
+    /**
+     * Cursor into the citations table for the self-chaining verification
+     * job. The batch worker processes citations with sortIndex in
+     * [nextCitationIndex, nextCitationIndex + BATCH_SIZE) on each
+     * invocation, then bumps the cursor and re-triggers itself.
+     * Defaults to 0 — verification starts at the first citation.
+     */
+    nextCitationIndex: integer("next_citation_index").notNull().default(0),
+    /**
+     * Wall-clock timestamp of the most recent verify-batch activity.
+     * Used by the watchdog to detect docs whose chain has died
+     * mid-stream and needs to be resumed.
+     */
+    lastBatchAt: timestamp("last_batch_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -178,9 +192,14 @@ export const citations = pgTable(
     /** Verdict rolled up from this citation's verifications. */
     verdict: verdict("verdict").notNull().default("unknown"),
     notes: text("notes"),
+    /** Stable processing order — citations are batched and resumed via this index. */
+    sortIndex: integer("sort_index"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (t) => [index("citations_doc_idx").on(t.documentId)],
+  (t) => [
+    index("citations_doc_idx").on(t.documentId),
+    index("citations_sort_idx").on(t.documentId, t.sortIndex),
+  ],
 );
 
 export const quotes = pgTable(

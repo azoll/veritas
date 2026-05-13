@@ -11,6 +11,10 @@ const isPublic = createRouteMatcher([
   "/api/health",
   "/api/trial/(.*)",
   "/api/sample-report/(.*)",
+  // Internal verification chain. Endpoint enforces its own auth via
+  // the INTERNAL_JOB_SECRET header — Clerk middleware skips it so
+  // self-chained fetches from the upload routes can reach it.
+  "/api/jobs/(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
