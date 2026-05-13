@@ -28,6 +28,7 @@ import {
   type CLOpinion,
 } from "@/lib/courtlistener";
 import { lookupCFR, lookupFedRule, lookupUSC } from "@/lib/lii";
+import { lookupStateStatute, stateStatuteCovered } from "@/lib/state-statutes";
 import { logAudit } from "@/lib/audit";
 import { aiAvailable, checkProposition } from "@/lib/ai";
 
@@ -188,8 +189,14 @@ async function verifyOneCitation(args: {
   switch (args.cite.kind) {
     case "statute":
       return verifyStatute(args);
+    case "state-statute":
+      return verifyStateStatute(args);
     case "rule":
       return verifyRule(args);
+    case "constitution":
+      return verifyConstitution(args);
+    case "slip":
+      return verifySlipOpinion(args);
     case "westlaw":
     case "lexis":
       return verifyOnlineOnly(args);
@@ -608,6 +615,157 @@ async function verifyStatute(args: {
   }
 
   return finalize(citationId, documentId, rolled);
+}
+
+async function verifyStateStatute(args: {
+  citationId: string;
+  documentId: string;
+  cite: ExtractedCitation;
+}): Promise<Verdict> {
+  const { citationId, documentId, cite } = args;
+  const query = `${cite.reporter} § ${cite.page}`;
+
+  // If the state isn't covered by Phase 1, surface as unknown so the
+  // lawyer at least sees an explicit "not yet covered" advisory
+  // rather than a false-verified.
+  if (!stateStatuteCovered(cite.reporter)) {
+    await db.insert(schema.verifications).values({
+      citationId,
+      documentId,
+      kind: "existence",
+      verdict: "unknown",
+      source: "veritas:state-statute",
+      detail: `State statute cited: ${query}. This state isn't covered by our Phase 1 verification corpus (currently CA, CO, FL, GA, IL, MI, NJ, NY, OH, PA, TX). Confirm against the official source before filing.`,
+      raw: { query } as never,
+    });
+    await skipDownstreamForAuthority(citationId, documentId, "statute", "unknown");
+    return finalize(citationId, documentId, "unknown");
+  }
+
+  let rolled: Verdict = "verified";
+  const result = await lookupStateStatute(cite.reporter, cite.page);
+  if (!result.ok) {
+    const isMissing = result.reason === "not_found";
+    rolled = worst(rolled, isMissing ? "risk" : "unknown");
+    await db.insert(schema.verifications).values({
+      citationId,
+      documentId,
+      kind: "existence",
+      verdict: isMissing ? "risk" : "unknown",
+      source: "state-legislature",
+      detail: isMissing
+        ? `No statute found at ${query} on the official state source or Justia mirror. Typical signal for a misnumbered or fabricated statutory cite.`
+        : `State statute existence check was inconclusive (source fetch failed). Recommend manual verification.`,
+      raw: { query, reason: result.reason } as never,
+    });
+    await skipDownstreamForAuthority(citationId, documentId, "statute", rolled);
+    return finalize(citationId, documentId, rolled);
+  }
+
+  await db.insert(schema.verifications).values({
+    citationId,
+    documentId,
+    kind: "existence",
+    verdict: "verified",
+    source: "state-legislature",
+    sourceUrl: result.sourceUrl,
+    detail: `Located ${result.title || query} on the official state source.`,
+    raw: { url: result.sourceUrl } as never,
+  });
+
+  await runStatutePincite(citationId, documentId, args.cite, result.excerpt, result.sourceUrl);
+  await runStatuteProposition(citationId, documentId, args.cite, result.excerpt, result.sourceUrl, query);
+
+  return finalize(citationId, documentId, rolled);
+}
+
+async function verifyConstitution(args: {
+  citationId: string;
+  documentId: string;
+  cite: ExtractedCitation;
+}): Promise<Verdict> {
+  const { citationId, documentId, cite } = args;
+  // Constitutional citations are public-domain and structural; we
+  // record them as verified-by-form and rely on the proposition
+  // check (when AI is available) to confirm the cited clause
+  // actually says what the brief claims.
+  const query = `${cite.reporter} ${cite.page}`;
+  await db.insert(schema.verifications).values({
+    citationId,
+    documentId,
+    kind: "existence",
+    verdict: "verified",
+    source: "veritas:constitution",
+    detail: `Constitutional citation: ${query}.`,
+    raw: { query } as never,
+  });
+  // No pincite or proposition check yet — Phase 2 will hook in an
+  // AI check against the canonical constitutional text. For now we
+  // write the explicit N/A rows so the three-checks guarantee
+  // continues to hold structurally.
+  await db.insert(schema.verifications).values({
+    citationId,
+    documentId,
+    kind: "pincite",
+    verdict: "verified",
+    source: "veritas:extract",
+    detail:
+      "No direct quotation attributed to this provision in the brief, or quotation matching is not yet supported for constitutional citations.",
+    raw: { applicable: false } as never,
+  });
+  await db.insert(schema.verifications).values({
+    citationId,
+    documentId,
+    kind: "proposition",
+    verdict: "unknown",
+    source: "veritas:constitution",
+    detail:
+      "Proposition-support check against canonical constitutional text is on the Phase 2 roadmap. The citation itself is well-formed; recommend confirming the cited clause actually supports the asserted proposition.",
+    raw: { reason: "phase_2_pending" } as never,
+  });
+  return finalize(citationId, documentId, "unknown");
+}
+
+async function verifySlipOpinion(args: {
+  citationId: string;
+  documentId: string;
+  cite: ExtractedCitation;
+}): Promise<Verdict> {
+  const { citationId, documentId, cite } = args;
+  // Slip opinions don't have a reporter cite to resolve. We record
+  // the docket as detected and flag it as "we can't independently
+  // verify without a reporter cite or PACER access" — never falsely
+  // marked as fabricated.
+  const query = `${cite.rawText}`;
+  await db.insert(schema.verifications).values({
+    citationId,
+    documentId,
+    kind: "existence",
+    verdict: "unknown",
+    source: "veritas:slip-opinion",
+    detail: `Slip-opinion / docket-only reference detected: ${query}. We do not have automated access to PACER, so we cannot independently confirm the underlying order. Recommend verifying against the court's docket before filing.`,
+    raw: { query, docket: cite.page, court: cite.court, year: cite.year } as never,
+  });
+  await db.insert(schema.verifications).values({
+    citationId,
+    documentId,
+    kind: "pincite",
+    verdict: "verified",
+    source: "veritas:extract",
+    detail: "Pincite check not applicable to docket-only references.",
+    raw: { applicable: false } as never,
+  });
+  await db.insert(schema.verifications).values({
+    citationId,
+    documentId,
+    kind: "proposition",
+    verdict: "unknown",
+    source: "veritas:slip-opinion",
+    detail:
+      "Proposition-support check not run — slip opinion text isn't accessible in our free corpus. Verify the cited order against the court's docket.",
+    raw: { reason: "no_source" } as never,
+  });
+  return finalize(citationId, documentId, "unknown");
 }
 
 async function verifyRule(args: {

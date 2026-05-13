@@ -24,7 +24,15 @@ import { z } from "zod";
 
 // Authority kind written to citations.kind in the DB. Used by the
 // verifier to pick the right downstream pipeline.
-export type CitationKind = "case" | "statute" | "rule" | "westlaw" | "lexis";
+export type CitationKind =
+  | "case"
+  | "statute"
+  | "state-statute"
+  | "rule"
+  | "constitution"
+  | "slip"
+  | "westlaw"
+  | "lexis";
 
 // State-reporter coverage. Extended past the original short list to
 // cover the major state-court reporters most litigators cite.
@@ -87,9 +95,25 @@ const REPORTER =
   "|Wis\\.?(?:2d)?" +
   ")";
 
+// Case name covers four shapes:
+//   - Adversarial:  "Smith v. Jones"
+//   - Relator:      "Smith ex rel. Doe v. Jones"
+//   - In re:        "In re Smith" or "In re Smith Industries, Inc."
+//   - Estate of:    "Estate of Smith v. Jones"
+const CASE_NAME =
+  "(?:" +
+  // "In re X" or "Matter of X"
+  "(?:In\\s+re|Matter\\s+of|Estate\\s+of)\\s+(?:[A-Z][A-Za-z'.&,\\-]+(?:\\s+[A-Z][A-Za-z'.&,\\-]+){0,5})" +
+  "|" +
+  // Standard "X v. Y" — allows "ex rel." in either side
+  "(?:[A-Z][A-Za-z'.&,\\-]+(?:\\s+(?:ex\\s+rel\\.\\s+)?[A-Z][A-Za-z'.&,\\-]+){0,5})" +
+  "\\s+v\\.\\s+" +
+  "(?:[A-Z][A-Za-z'.&,\\-]+(?:\\s+(?:ex\\s+rel\\.\\s+)?[A-Z][A-Za-z'.&,\\-]+){0,5})" +
+  ")";
+
 const CITE_RE = new RegExp(
   // optional case name — capital-initialed words then " v. " then capital words, ending before the volume number
-  `((?:[A-Z][A-Za-z'.&,\\-]+(?:\\s+[A-Z][A-Za-z'.&,\\-]+){0,4})\\s+v\\.\\s+(?:[A-Z][A-Za-z'.&,\\-]+(?:\\s+[A-Z][A-Za-z'.&,\\-]+){0,4}))?` +
+  `(${CASE_NAME})?` +
     `\\s*,?\\s*` +
     // volume reporter page
     `(\\d{1,4})\\s+(${REPORTER})\\s+(\\d{1,5})` +
@@ -97,6 +121,31 @@ const CITE_RE = new RegExp(
     `(?:,\\s*(\\d{1,5}))?` +
     // optional parenthetical court / year
     `(?:\\s*\\(([^)]{1,80})\\))?`,
+  "g",
+);
+
+// U.S. and state constitutional citations: "U.S. Const. amend. V",
+// "U.S. Const. art. III, § 2", "Cal. Const. art. I, § 1".
+const CONSTITUTION_RE = new RegExp(
+  "((?:U\\.?\\s?S\\.?|Ala|Alaska|Ariz|Ark|Cal|Colo|Conn|Del|Fla|Ga|Haw|Idaho|Ill|Ind|Iowa|Kan|Ky|La|Me|Md|Mass|Mich|Minn|Miss|Mo|Mont|Neb|Nev|N\\.?H|N\\.?J|N\\.?M|N\\.?Y|N\\.?C|N\\.?D|Ohio|Okla|Or|Pa|R\\.?I|S\\.?C|S\\.?D|Tenn|Tex|Utah|Vt|Va|Wash|W\\.?Va|Wis|Wyo)\\.?)\\s+" +
+  "Const\\.?\\s+" +
+  // either "amend. X" or "art. III, § 2"
+  "(?:" +
+  "amend\\.?\\s+([IVXLC]+|\\d+)" +
+  "|" +
+  "art\\.?\\s+([IVXLC]+|\\d+)" +
+  "(?:,?\\s*§§?\\s*(\\d+(?:\\([^)]+\\))?))?" +
+  ")",
+  "gi",
+);
+
+// Slip opinion / docket-only references: "No. 21-cv-1701 (N.D. Ala. July
+// 23, 2025)", "Case No. 2023-CV-456 (D.D.C. 2024)". These are recent
+// or unreported decisions that don't yet have a published reporter cite.
+const SLIP_OPINION_RE = new RegExp(
+  "(?:No\\.|Case\\s+No\\.|Civil\\s+(?:Action\\s+)?No\\.)\\s*" +
+  "([0-9]+[\\-:][\\w\\-]+)" + // docket like "21-cv-1701" or "2023-CV-456"
+  "\\s*\\(([^)]{3,80})\\)", // parenthetical with court + date
   "g",
 );
 
@@ -117,7 +166,7 @@ const STATUTE_RE = new RegExp(
 // "N.Y. Penal Law § 125.25", "Tex. Bus. & Com. Code § 17.46".
 const STATE_STATUTE_RE = new RegExp(
   "((?:Ala|Alaska|Ariz|Ark|Cal|Colo|Conn|Del|D\\.?C|Fla|Ga|Haw|Idaho|Ill|Ind|Iowa|Kan|Ky|La|Me|Md|Mass|Mich|Minn|Miss|Mo|Mont|Neb|Nev|N\\.?H|N\\.?J|N\\.?M|N\\.?Y|N\\.?C|N\\.?D|Ohio|Okla|Or|Pa|R\\.?I|S\\.?C|S\\.?D|Tenn|Tex|Utah|Vt|Va|Wash|W\\.?Va|Wis|Wyo)\\.?" +
-  "(?:\\s+(?:Stat|Code|Civ|Penal|Bus|Com|Health|Welf|Lab|Educ|Pub|Gov|Fam|Prob|Civ\\.?\\s?Proc|R\\.?\\s?Civ\\.?\\s?P|Ann)\\.?)+)" +
+  "(?:\\s+(?:Rev|Cons|Comp|Ann|Stat|Code|Civ|Penal|Bus|Com|Health|Welf|Lab|Educ|Pub|Gov|Fam|Prob|Civ\\.?\\s?Proc|R\\.?\\s?Civ\\.?\\s?P)\\.?)+)" +
   "\\s*§§?\\s*(\\d+[\\w\\-.]*(?:\\([^)]+\\))*)",
   "g",
 );
@@ -238,6 +287,68 @@ export function extractCitationsRegex(text: string): ExtractedCitation[] {
     });
   }
 
+  // 2b. Constitutions (federal + state) — must run before case regex
+  // because "U.S. Const." starts with "U.S." which the case regex
+  // would otherwise greedily try to claim.
+  for (const m of text.matchAll(CONSTITUTION_RE)) {
+    const start = m.index ?? 0;
+    const end = start + m[0].length;
+    const sovereign = m[1].replace(/\s+/g, " ").trim();
+    const amendment = m[2];
+    const article = m[3];
+    const section = m[4];
+    // "page" stores the address: "amend. V" or "art. III § 2"
+    const address = amendment
+      ? `amend. ${amendment}`
+      : `art. ${article}${section ? ` § ${section}` : ""}`;
+    const key = `const:${sovereign}:${address}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    claim(start, end);
+    out.push({
+      kind: "constitution",
+      rawText: m[0].trim(),
+      reporter: `${sovereign} Const.`,
+      volume: "",
+      page: address,
+      startOffset: start,
+      endOffset: end,
+      contextSnippet: snippet(text, start, end),
+    });
+  }
+
+  // 2c. Slip opinions / docket-only references
+  for (const m of text.matchAll(SLIP_OPINION_RE)) {
+    const start = m.index ?? 0;
+    const end = start + m[0].length;
+    const docket = m[1].trim();
+    const paren = m[2].trim();
+    // Only treat as a slip opinion if the parenthetical looks like a
+    // court + date (contains a year). Otherwise this is some random
+    // numeric reference.
+    if (!/\b(1[89]|20)\d{2}\b/.test(paren)) continue;
+    const yearMatch = paren.match(/\b(1[89]\d{2}|20\d{2})\b/);
+    const year = yearMatch ? Number(yearMatch[1]) : undefined;
+    const court = paren.replace(/\b(1[89]\d{2}|20\d{2})\b/, "").replace(/,?\s*$/, "").trim();
+    const key = `slip:${docket}:${court}:${year}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    claim(start, end);
+    out.push({
+      kind: "slip",
+      rawText: m[0].trim(),
+      reporter: "Slip op.",
+      volume: "",
+      page: docket,
+      court: court || undefined,
+      year,
+      parenthetical: paren,
+      startOffset: start,
+      endOffset: end,
+      contextSnippet: snippet(text, start, end),
+    });
+  }
+
   // 3. Federal Rules
   for (const m of text.matchAll(FED_RULE_RE)) {
     const start = m.index ?? 0;
@@ -280,7 +391,8 @@ export function extractCitationsRegex(text: string): ExtractedCitation[] {
     });
   }
 
-  // 5. State statutes
+  // 5. State statutes — flagged distinctly so the verifier can route
+  // them to per-state lookups rather than Cornell LII.
   for (const m of text.matchAll(STATE_STATUTE_RE)) {
     const start = m.index ?? 0;
     const end = start + m[0].length;
@@ -290,7 +402,7 @@ export function extractCitationsRegex(text: string): ExtractedCitation[] {
     seen.add(key);
     claim(start, end);
     out.push({
-      kind: "statute",
+      kind: "state-statute",
       rawText: m[0].trim(),
       reporter: code,
       volume: "",
@@ -302,39 +414,130 @@ export function extractCitationsRegex(text: string): ExtractedCitation[] {
   }
 
   // 6. Case citations (last — most general, lowest priority).
+  // We also fold parallel cites into the first occurrence: when two
+  // cites appear back-to-back at the same location and share a case
+  // name, we keep only the first and stash the rest as `parallel`
+  // strings for display, so a verifier doesn't make three CL calls
+  // for one underlying case.
+  const caseMatches: Array<{
+    whole: string;
+    caseName?: string;
+    volume: string;
+    reporter: string;
+    page: string;
+    pin?: string;
+    paren?: string;
+    start: number;
+    end: number;
+  }> = [];
+
   for (const match of text.matchAll(CITE_RE)) {
     const [whole, caseName, volume, reporter, page, pin, paren] = match;
     const start = match.index ?? 0;
     const end = start + whole.length;
     if (overlaps(start, end)) continue;
-
-    let year: number | undefined;
-    let court: string | undefined;
-    if (paren) {
-      const yearMatch = paren.match(/\b(1[89]\d{2}|20\d{2})\b/);
-      if (yearMatch) year = Number(yearMatch[1]);
-      court = paren.replace(/\b(1[89]\d{2}|20\d{2})\b/, "").trim() || undefined;
-    }
-
     const key = `case:${volume}:${reporter}:${page}`;
     if (seen.has(key)) continue;
     seen.add(key);
     claim(start, end);
-
-    out.push({
-      kind: "case",
-      rawText: whole.trim(),
-      caseName: caseName?.trim(),
+    caseMatches.push({
+      whole,
+      caseName,
       volume,
       reporter: reporter.replace(/\s+/g, " ").trim(),
       page,
-      pinpointPage: pin,
-      parenthetical: paren,
+      pin,
+      paren,
+      start,
+      end,
+    });
+  }
+
+  // Fold parallel citations using a "chain head" cursor. A typical
+  // Bluebook parallel cite reads "Case, 329 U.S. 495, 67 S. Ct. 385,
+  // 91 L. Ed. 451 (1947)" — we want to keep only the first and treat
+  // the rest as the same authority. The challenge: each parallel
+  // sits within ~30 chars of the previous one, but the third
+  // parallel is >60 chars from the first. So instead of pairwise
+  // comparison, we walk left-to-right and grow a chain as long as
+  // each new match continues to look like a parallel of the head.
+  caseMatches.sort((a, b) => a.start - b.start);
+  const dropped = new Set<number>();
+  let chainHead: number | null = null;
+  let chainTailEnd = 0;
+  for (let i = 0; i < caseMatches.length; i++) {
+    const curr = caseMatches[i];
+    if (chainHead === null) {
+      chainHead = i;
+      chainTailEnd = curr.end;
+      continue;
+    }
+    const head = caseMatches[chainHead];
+    const gapFromTail = curr.start - chainTailEnd;
+    // Parallels of the same case sit shoulder-to-shoulder in the
+    // source, typically separated by ", " (2 chars). >40 means a
+    // string cite or new sentence.
+    if (gapFromTail < 0 || gapFromTail > 40) {
+      chainHead = i;
+      chainTailEnd = curr.end;
+      continue;
+    }
+    const headName = head.caseName?.split(/\s/)[0];
+    const currName = curr.caseName?.split(/\s/)[0];
+    const namesAgree =
+      !currName || (headName !== undefined && currName === headName);
+    if (namesAgree) {
+      // Same case — fold curr into head and extend the tail.
+      dropped.add(i);
+      chainTailEnd = curr.end;
+    } else {
+      chainHead = i;
+      chainTailEnd = curr.end;
+    }
+  }
+
+  // After parallel detection: a "pinpoint" we captured may actually
+  // be the VOLUME of an adjacent parallel cite. Pattern:
+  //   "329 U.S. 495, 67 S. Ct. 385" → regex captures vol=329,
+  //   page=495, pin=67, but "67" is really the volume of the
+  //   "S. Ct. 385" parallel. Detect that by looking at the source
+  //   text immediately after the match: a leading "<REPORTER> <n>"
+  //   sequence means the pin is bogus and should be stripped.
+  const reporterTokenRE = new RegExp(`^\\s*${REPORTER}\\s+\\d{1,5}\\b`);
+  for (const m of caseMatches) {
+    if (!m.pin) continue;
+    const after = text.slice(m.end, m.end + 40);
+    if (reporterTokenRE.test(after)) m.pin = undefined;
+  }
+
+  for (let i = 0; i < caseMatches.length; i++) {
+    if (dropped.has(i)) continue;
+    const c = caseMatches[i];
+    let year: number | undefined;
+    let court: string | undefined;
+    if (c.paren) {
+      const yearMatch = c.paren.match(/\b(1[89]\d{2}|20\d{2})\b/);
+      if (yearMatch) year = Number(yearMatch[1]);
+      court = c.paren.replace(/\b(1[89]\d{2}|20\d{2})\b/, "").trim() || undefined;
+    }
+    // Normalize whitespace inside rawText — multi-line case names
+    // (e.g. when "v." breaks across a line in the source PDF) read
+    // ugly in the report UI otherwise.
+    const rawText = c.whole.replace(/\s+/g, " ").trim();
+    out.push({
+      kind: "case",
+      rawText,
+      caseName: c.caseName?.replace(/\s+/g, " ").trim(),
+      volume: c.volume,
+      reporter: c.reporter,
+      page: c.page,
+      pinpointPage: c.pin,
+      parenthetical: c.paren,
       court,
       year,
-      startOffset: start,
-      endOffset: end,
-      contextSnippet: snippet(text, start, end),
+      startOffset: c.start,
+      endOffset: c.end,
+      contextSnippet: snippet(text, c.start, c.end),
     });
   }
 
@@ -434,7 +637,16 @@ export function resolveShortForms(
 }
 
 export const ExtractedCitationSchema = z.object({
-  kind: z.enum(["case", "statute", "rule", "westlaw", "lexis"]),
+  kind: z.enum([
+    "case",
+    "statute",
+    "state-statute",
+    "rule",
+    "constitution",
+    "slip",
+    "westlaw",
+    "lexis",
+  ]),
   rawText: z.string(),
   caseName: z.string().optional(),
   volume: z.string(),
