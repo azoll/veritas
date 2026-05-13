@@ -55,6 +55,16 @@ const SEED_LIST: Array<{ vol: string; reporter: string; page: string; name: stri
   // Add more from the master CL most-cited list as the cache grows.
 ];
 
+/**
+ * GET variant for Vercel Cron. Vercel Cron sends GET requests with
+ * Authorization: Bearer <CRON_SECRET>; verifyJobSecretMatches accepts
+ * that auth shape, so the same logic runs from either the manual
+ * curl POST or the scheduled GET hit.
+ */
+export async function GET(req: Request) {
+  return POST(req);
+}
+
 export async function POST(req: Request) {
   if (!verifyJobSecretMatches(req)) {
     return new Response("Forbidden", { status: 403 });

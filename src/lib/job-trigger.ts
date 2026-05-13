@@ -12,13 +12,24 @@
 const SECRET = process.env.INTERNAL_JOB_SECRET ?? "";
 export const INTERNAL_JOB_HEADER = "x-veritas-job-secret";
 
+/**
+ * Accept either:
+ *   - INTERNAL_JOB_SECRET via `x-veritas-job-secret` header (our own
+ *     self-chain triggers + curl invocations from ops)
+ *   - CRON_SECRET via `Authorization: Bearer ...` (Vercel Cron's
+ *     auto-injected auth pattern)
+ *
+ * If neither is configured, accept everything (dev convenience).
+ */
 export function verifyJobSecretMatches(req: Request): boolean {
-  if (!SECRET) {
-    // In dev with no secret set we accept all calls. Production
-    // must set INTERNAL_JOB_SECRET — middleware should enforce this.
-    return true;
+  if (!SECRET && !process.env.CRON_SECRET) return true;
+  if (SECRET && req.headers.get(INTERNAL_JOB_HEADER) === SECRET) return true;
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const auth = req.headers.get("authorization");
+    if (auth === `Bearer ${cronSecret}`) return true;
   }
-  return req.headers.get(INTERNAL_JOB_HEADER) === SECRET;
+  return false;
 }
 
 /**

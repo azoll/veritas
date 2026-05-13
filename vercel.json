@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/jobs/cache-preseed?count=20",
+      "schedule": "0 14 * * 1"
+    }
+  ]
+}
