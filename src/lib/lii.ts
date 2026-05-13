@@ -19,6 +19,8 @@
  * URL for federal statutory and rules text.
  */
 
+import { CACHE_VERSION, TTL, cacheGet, cacheIncr, cacheSet } from "./cache";
+
 // Pure-ASCII UA — Vercel's fetch rejects non-ASCII header values
 // (the em-dash that used to live here was silently failing every
 // statute and rule lookup).
@@ -73,6 +75,33 @@ async function fetchExcerpt(url: string): Promise<LIIResult> {
   return { ok: true, sourceUrl: url, excerpt, title };
 }
 
+/**
+ * Cache-aside wrapper for fetchExcerpt. Statute and rule pages
+ * change very slowly (annual amendments at most), so we cache
+ * successes for 7 days and not_founds for 24 hours. Errors are
+ * never cached.
+ */
+async function cachedFetchExcerpt(
+  scope: string,
+  cacheId: string,
+  url: string,
+): Promise<LIIResult> {
+  const cacheKey = `${CACHE_VERSION}:lii:${scope}:${cacheId}`;
+  const cached = await cacheGet<LIIResult>(cacheKey);
+  if (cached) {
+    await cacheIncr(`metrics:lii-${scope}:hit`);
+    return cached;
+  }
+  await cacheIncr(`metrics:lii-${scope}:miss`);
+  const fresh = await fetchExcerpt(url);
+  if (fresh.ok) {
+    await cacheSet(cacheKey, fresh, TTL.SEVEN_DAYS);
+  } else if (fresh.reason === "not_found") {
+    await cacheSet(cacheKey, fresh, TTL.ONE_DAY);
+  }
+  return fresh;
+}
+
 /** Federal statute lookup: title + section → LII U.S.C. URL. */
 export async function lookupUSC(
   title: string,
@@ -83,7 +112,7 @@ export async function lookupUSC(
   // same page.
   const baseSection = section.replace(/[()].*$/, "").replace(/\s+/g, "");
   const url = `https://www.law.cornell.edu/uscode/text/${title}/${baseSection}`;
-  return fetchExcerpt(url);
+  return cachedFetchExcerpt("usc", `${title}-${baseSection}`, url);
 }
 
 export async function lookupCFR(
@@ -92,7 +121,7 @@ export async function lookupCFR(
 ): Promise<LIIResult> {
   const baseSection = section.replace(/[()].*$/, "").replace(/\s+/g, "");
   const url = `https://www.law.cornell.edu/cfr/text/${title}/${baseSection}`;
-  return fetchExcerpt(url);
+  return cachedFetchExcerpt("cfr", `${title}-${baseSection}`, url);
 }
 
 /**
@@ -120,5 +149,5 @@ export async function lookupFedRule(
   if (!slug) return { ok: false, reason: "error" };
   const baseNumber = number.replace(/[()].*$/, "").replace(/\s+/g, "");
   const url = `https://www.law.cornell.edu/rules/${slug}/rule_${baseNumber}`;
-  return fetchExcerpt(url);
+  return cachedFetchExcerpt("rule", `${slug}-${baseNumber}`, url);
 }

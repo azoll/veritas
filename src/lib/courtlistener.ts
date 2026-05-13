@@ -4,7 +4,14 @@
  *
  * We don't need a key for low-volume reads, but supplying one via
  * COURTLISTENER_TOKEN dramatically increases rate limits.
+ *
+ * Every public function in this module is cache-aside wrapped — the
+ * raw `*Uncached` variants always hit CL, the public variants
+ * consult Upstash Redis first. When no cache is provisioned the
+ * adapter no-ops and every call passes through to CL.
  */
+
+import { CACHE_VERSION, TTL, cacheGet, cacheIncr, cacheSet } from "./cache";
 
 const BASE = "https://www.courtlistener.com/api/rest/v4";
 
@@ -80,7 +87,37 @@ export type CLLookupResult =
   | { ok: true; clusterId: number; caseName: string; absoluteUrl: string }
   | { ok: false; reason: "not_found" | "rate_limited" | "error" };
 
+/**
+ * Cache-aside wrapper. Cite addresses are immutable so `ok: true`
+ * results cache forever; `not_found` caches for 24h (give CL time
+ * to ingest new opinions); rate_limited and error are never cached.
+ *
+ * Built as a source chain so Stage 2/3 of the data-layer progression
+ * (local DB mirror, then fully self-hosted federal corpus) slot in
+ * at the front of `sources` without touching the verifier.
+ */
 export async function lookupCitation(
+  volume: string,
+  reporter: string,
+  page: string,
+): Promise<CLLookupResult> {
+  const cacheKey = `${CACHE_VERSION}:cite:${volume}:${reporter.replace(/\s+/g, "")}:${page}`;
+  const cached = await cacheGet<CLLookupResult>(cacheKey);
+  if (cached) {
+    await cacheIncr("metrics:cite:hit");
+    return cached;
+  }
+  await cacheIncr("metrics:cite:miss");
+  const fresh = await lookupCitationUncached(volume, reporter, page);
+  if (fresh.ok) {
+    await cacheSet(cacheKey, fresh, TTL.FOREVER);
+  } else if (fresh.reason === "not_found") {
+    await cacheSet(cacheKey, fresh, TTL.ONE_DAY);
+  }
+  return fresh;
+}
+
+async function lookupCitationUncached(
   volume: string,
   reporter: string,
   page: string,
@@ -220,6 +257,22 @@ function htmlToText(html: string): string {
 }
 
 export async function fetchOpinionText(opinionId: number): Promise<CLOpinion | null> {
+  // Opinions are immutable once published — cache forever.
+  const cacheKey = `${CACHE_VERSION}:opinion:${opinionId}`;
+  const cached = await cacheGet<CLOpinion>(cacheKey);
+  if (cached) {
+    await cacheIncr("metrics:opinion:hit");
+    return cached;
+  }
+  await cacheIncr("metrics:opinion:miss");
+  const fresh = await fetchOpinionTextUncached(opinionId);
+  if (fresh && fresh.plainText && fresh.plainText.length > 500) {
+    await cacheSet(cacheKey, fresh, TTL.FOREVER);
+  }
+  return fresh;
+}
+
+async function fetchOpinionTextUncached(opinionId: number): Promise<CLOpinion | null> {
   const r = await fetchWithRetry(`${BASE}/opinions/${opinionId}/`, {
     headers: headers(),
     next: { revalidate: 86400 * 30 }, // opinions are immutable
@@ -260,6 +313,24 @@ export type CLCluster = {
 };
 
 export async function fetchCluster(clusterId: number): Promise<CLCluster | null> {
+  // Cluster metadata changes slowly — citationCount grows as new
+  // cases cite this authority. 30-day TTL strikes the balance
+  // between data freshness and cache effectiveness.
+  const cacheKey = `${CACHE_VERSION}:cluster:${clusterId}`;
+  const cached = await cacheGet<CLCluster>(cacheKey);
+  if (cached) {
+    await cacheIncr("metrics:cluster:hit");
+    return cached;
+  }
+  await cacheIncr("metrics:cluster:miss");
+  const fresh = await fetchClusterUncached(clusterId);
+  if (fresh) {
+    await cacheSet(cacheKey, fresh, TTL.THIRTY_DAYS);
+  }
+  return fresh;
+}
+
+async function fetchClusterUncached(clusterId: number): Promise<CLCluster | null> {
   const r = await fetchWithRetry(`${BASE}/clusters/${clusterId}/`, {
     headers: headers(),
     next: { revalidate: 86400 },

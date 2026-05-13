@@ -11,6 +11,7 @@ import { gateway } from "@ai-sdk/gateway";
 import { generateObject } from "ai";
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { CACHE_VERSION, TTL, cacheGet, cacheIncr, cacheSet } from "./cache";
 
 // AI Gateway model id format is "provider/model" with dot-separated
 // version numbers (claude-sonnet-4.6, not claude-sonnet-4-6).
@@ -75,6 +76,24 @@ Respond in 1–2 sentences, quoting the most relevant passage when possible.`;
     .digest("hex")
     .slice(0, 16);
 
+  // Cache key: full SHA-256 of the prompt. Two scans of the same
+  // citation with the same surrounding argument paragraph produce
+  // the same prompt → the same verdict. AI inference is the most
+  // expensive component of a scan (both wall-time and cash); this
+  // cache is the highest-value entry in the layer.
+  //
+  // Note we key on the prompt hash, not on (citationId, snippet),
+  // so the cache is portable across documents and trial sessions.
+  // Same brief cited the same way in two different filings = one
+  // AI call, not two.
+  const cacheKey = `${CACHE_VERSION}:prop:${createHash("sha256").update(prompt).digest("hex")}`;
+  const cached = await cacheGet<PropositionResult>(cacheKey);
+  if (cached) {
+    await cacheIncr("metrics:prop:hit");
+    return cached;
+  }
+  await cacheIncr("metrics:prop:miss");
+
   try {
     const { object } = await generateObject({
       model: gateway(PROPOSITION_MODEL),
@@ -82,7 +101,15 @@ Respond in 1–2 sentences, quoting the most relevant passage when possible.`;
       prompt,
       temperature: 0,
     });
-    return { ...object, model: PROPOSITION_MODEL, promptHash };
+    const result: PropositionResult = {
+      ...object,
+      model: PROPOSITION_MODEL,
+      promptHash,
+    };
+    // Propositions are deterministic for a given prompt at temperature
+    // 0; cache forever (model upgrades bump CACHE_VERSION).
+    await cacheSet(cacheKey, result, TTL.FOREVER);
+    return result;
   } catch (e) {
     console.warn("[veritas] proposition check failed:", (e as Error).message);
     return null;
