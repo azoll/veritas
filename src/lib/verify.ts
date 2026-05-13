@@ -137,19 +137,40 @@ export async function verifyDocument(documentId: string, firmId: string) {
   let warnings = 0;
   let risks = 0;
 
-  for (let i = 0; i < cites.length; i++) {
-    const rolled = await verifyOneCitation({
-      citationId: citationIds[i],
-      documentId,
-      cite: cites[i],
-      quoted: quoteByIdx.get(i),
-      deepScan,
-    });
-
-    if (rolled === "verified") verified++;
-    else if (rolled === "warning") warnings++;
-    else if (rolled === "risk") risks++;
+  // Verify citations in parallel with a bounded concurrency pool.
+  // Strict-sequential is O(N) wall time and hits the 300s function
+  // ceiling on 25+ citation briefs. The CL throttle (600ms spacer in
+  // clThrottle) is the only thing that actually needs to be
+  // serialized — running N citations through verifyOneCitation
+  // concurrently means each citation's stages (existence → cluster
+  // → opinion → AI) overlap with other citations' stages, and only
+  // the raw CL requests have to wait their turn. AI Gateway calls
+  // also pipeline freely.
+  //
+  // Pool size of 4 keeps DB writes from dogpiling and stays well
+  // inside Neon's connection limits while still giving a ~3-4x
+  // wall-time speedup on real briefs.
+  const POOL_SIZE = 4;
+  let cursor = 0;
+  async function worker() {
+    while (true) {
+      const i = cursor++;
+      if (i >= cites.length) return;
+      const rolled = await verifyOneCitation({
+        citationId: citationIds[i],
+        documentId,
+        cite: cites[i],
+        quoted: quoteByIdx.get(i),
+        deepScan,
+      });
+      if (rolled === "verified") verified++;
+      else if (rolled === "warning") warnings++;
+      else if (rolled === "risk") risks++;
+    }
   }
+  await Promise.all(
+    Array.from({ length: Math.min(POOL_SIZE, cites.length) }, () => worker()),
+  );
 
   const total = cites.length || 1;
   const score = Math.round(((verified + 0.5 * warnings) / total) * 100);

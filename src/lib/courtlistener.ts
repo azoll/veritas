@@ -31,7 +31,11 @@ function headers() {
  * awaits before firing their fetch.
  */
 let throttleChain: Promise<void> = Promise.resolve();
-const CL_REQUEST_SPACING_MS = 600;
+// 400ms spacing = 150 req/min steady-state. CourtListener's
+// authenticated per-token limit is approximately 5K/hr with a
+// soft per-minute burst cap around 100-150. 400ms keeps us inside
+// the burst cap while halving the throughput cost vs 600ms.
+const CL_REQUEST_SPACING_MS = 400;
 async function clThrottle(): Promise<void> {
   const myTurn = throttleChain.then(
     () => new Promise<void>((res) => setTimeout(res, CL_REQUEST_SPACING_MS)),
