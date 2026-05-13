@@ -1,6 +1,7 @@
 import { lookupCitation, fetchCluster, fetchOpinionText } from "@/lib/courtlistener";
 import { verifyJobSecretMatches, INTERNAL_JOB_HEADER } from "@/lib/job-trigger";
 import { cacheAvailable } from "@/lib/cache";
+import { waitUntil } from "@vercel/functions";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -276,7 +277,11 @@ export async function POST(req: Request) {
     }
   }
 
-  // Chain forward if more SEED_LIST entries remain.
+  // Chain forward if more SEED_LIST entries remain. Wrap the outbound
+  // fetch in waitUntil so Vercel keeps this function instance alive
+  // long enough for the request to actually dispatch — without it,
+  // Vercel terminates the function the instant we return the response
+  // and the in-flight fetch dies before reaching the network.
   const nextOffset = offset + seedAt.length;
   const hasMore = nextOffset < SEED_LIST.length;
   if (hasMore) {
@@ -285,8 +290,11 @@ export async function POST(req: Request) {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     const secret = process.env.INTERNAL_JOB_SECRET;
     if (secret) headers[INTERNAL_JOB_HEADER] = secret;
-    // Fire-and-forget self-chain.
-    void fetch(nextUrl, { method: "POST", headers, keepalive: true }).catch(() => {});
+    waitUntil(
+      fetch(nextUrl, { method: "POST", headers, keepalive: true }).catch(
+        (e) => console.warn(`[preseed] chain dispatch failed: ${e.message}`),
+      ),
+    );
   }
 
   return Response.json({
