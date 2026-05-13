@@ -112,7 +112,14 @@ export async function lookupCitation(
   if (fresh.ok) {
     await cacheSet(cacheKey, fresh, TTL.FOREVER);
   } else if (fresh.reason === "not_found") {
-    await cacheSet(cacheKey, fresh, TTL.ONE_DAY);
+    // 7-day TTL on not_founds. AI hallucination patterns concentrate
+    // around recent reporter series and the same plausible-but-fake
+    // addresses get re-cited across many briefs — caching those 404s
+    // longer means we don't re-hit CL once a day for the same known
+    // fabrication. CL ingestion delay for new real opinions is
+    // usually a few days, so 7 days still leaves margin for the rare
+    // case where a "fabrication" later becomes a real cite.
+    await cacheSet(cacheKey, fresh, TTL.SEVEN_DAYS);
   }
   return fresh;
 }

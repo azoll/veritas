@@ -97,7 +97,11 @@ async function cachedFetchExcerpt(
   if (fresh.ok) {
     await cacheSet(cacheKey, fresh, TTL.SEVEN_DAYS);
   } else if (fresh.reason === "not_found") {
-    await cacheSet(cacheKey, fresh, TTL.ONE_DAY);
+    // Same rationale as the citation cache: AI-hallucinated section
+    // numbers within a real title (e.g. 42 U.S.C. § 9999) get
+    // re-cited across many briefs. 7-day TTL avoids redundant LII
+    // hits for the same known-bogus addresses.
+    await cacheSet(cacheKey, fresh, TTL.SEVEN_DAYS);
   }
   return fresh;
 }
