@@ -156,7 +156,8 @@ const SEED_LIST: Array<{ vol: string; reporter: string; page: string; name: stri
   { vol: "529", reporter: "U.S.", page: "362", name: "Williams v. Taylor" },
   { vol: "560", reporter: "U.S.", page: "631", name: "Berghuis v. Thompkins" },
   // ── CONTRACTS / COMMERCIAL ───────────────────────────────────
-  { vol: "9", reporter: "U.S.", page: "388", name: "Hadley v. Baxendale (analog)" },
+  // (Hadley v. Baxendale itself is a British case from 1854 and isn't
+  //  in CL's corpus. Placeholder removed.)
   // ── BANKRUPTCY ───────────────────────────────────────────────
   { vol: "566", reporter: "U.S.", page: "639", name: "Stern v. Marshall" },
   { vol: "578", reporter: "U.S.", page: "1", name: "Husky Int'l Elec. v. Ritz" },
@@ -170,9 +171,9 @@ const SEED_LIST: Array<{ vol: string; reporter: string; page: string; name: stri
   { vol: "573", reporter: "U.S.", page: "258", name: "Halliburton v. Erica P. John Fund" },
   { vol: "511", reporter: "U.S.", page: "164", name: "Cent. Bank of Denver v. First Interstate" },
   // ── TAX ──────────────────────────────────────────────────────
-  { vol: "522", reporter: "U.S.", page: "470", name: "INDOPCO v. Commissioner" },
+  { vol: "503", reporter: "U.S.", page: "79", name: "INDOPCO v. Commissioner" },
   // ── REMOVAL / FEDERAL JURISDICTION ───────────────────────────
-  { vol: "522", reporter: "U.S.", page: "470", name: "Caterpillar v. Williams" },
+  { vol: "482", reporter: "U.S.", page: "386", name: "Caterpillar v. Williams" },
   { vol: "545", reporter: "U.S.", page: "308", name: "Grable & Sons Metal v. Darue" },
   { vol: "583", reporter: "U.S.", page: "388", name: "BNSF Ry. v. Tyrrell" },
   // ── CLASS ACTIONS ────────────────────────────────────────────
